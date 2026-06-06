@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ChainDegree.API/ChainDegree.API.csproj" Id="15d170d9-b85b-486b-b88f-964bf46b2b3b" />
+    <Project Path="src/ChainDegree.Application/ChainDegree.Application.csproj" Id="5d2fdaf9-f560-4af7-8343-b26c9ff03745" />
+    <Project Path="src/ChainDegree.Domain/ChainDegree.Domain.csproj" Id="728ab21d-d839-4164-aac5-297132df11d0" />
+    <Project Path="src/ChainDegree.Infrastructure/ChainDegree.Infrastructure.csproj" Id="7da8c0aa-736c-4b32-bd6a-fb5a57eff4f4" />
+    <Project Path="src/ChainDegree.SharedKernel/ChainDegree.SharedKernel.csproj" Id="240fc58e-85dd-46b9-b007-27acb63aad81" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>

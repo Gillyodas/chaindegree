@@ -1,0 +1,6 @@
+@ChainDegree.API_HostAddress = http://localhost:5196
+
+GET {{ChainDegree.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
