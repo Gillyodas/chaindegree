@@ -1,0 +1,39 @@
+---
+config:
+  layout: elk
+---
+graph LR
+    Registrar((fa:fa-user Registrar))
+    Student((fa:fa-user Student))
+    Recruiter((fa:fa-user Recruiter))
+    SystemEngine((fa:fa-gear System Engine))
+    subgraph System_Boundary [Hệ Thống Xác Thực Văn Bằng Số]
+        UC1([UC-1: Cấp phát văn bằng mới])
+        UC2([UC-2: Sửa đổi / Thu hồi văn bằng])
+        UC3([UC-3: Tra cứu & Đối chiếu văn bằng])
+        UC4([UC-4: Gửi báo cáo sai sót / Gian lận])
+        UC5([UC-5: Tự động tính Điểm uy tín])
+        UC6([UC-6: Đăng tin tuyển dụng có bộ lọc])
+        UC7([UC-7: Ứng tuyển nhanh bằng văn bằng])
+        UCAudit([UC-Audit: Tự động ghi nhật ký hành vi])
+    end
+    Registrar --- UC1
+    Registrar --- UC2
+    UC3 --- Student
+    UC4 --- Student
+    UC7 --- Student
+    UC3 --- Recruiter
+    UC4 --- Recruiter
+    UC6 --- Recruiter
+    UC7 --- Recruiter
+    SystemEngine --- UC5
+    SystemEngine --- UCAudit
+    UC2 -.-> |trigger| UC5
+    UC4 -.-> |trigger| UC5
+    UC1 -.-> |include| UCAudit
+    UC2 -.-> |include| UCAudit
+    UC3 -.-> |include| UCAudit
+    UC4 -.-> |include| UCAudit
+    UC5 -.-> |include| UCAudit
+    UC6 -.-> |include| UCAudit
+    UC7 -.-> |include| UCAudit
