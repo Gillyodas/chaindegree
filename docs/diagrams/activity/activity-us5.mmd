@@ -1,0 +1,92 @@
+graph TD
+    %% --- ĐỊNH VỊ PHÂN LÀN DỌC SONG SONG (TỪ TRÁI SANG PHẢI) ---
+    
+    %% Cột 1: Nguồn kích hoạt sự kiện (Event Triggers)
+    subgraph Registrar_Lane [Nguồn sự kiện kích hoạt]
+        direction TB
+        Start([ ]) --> ChoiceEvent{Sự kiện xảy ra?}
+        
+        %% Các luồng kích hoạt từ US-4
+        ChoiceEvent -->|Duyệt đơn khiếu nại US-4| ReportApproved{Loại báo cáo \n được phê duyệt?}
+        ReportApproved -->|Lỗi thông tin từ SV| SubmitEvent[Phát tín hiệu Kích hoạt hệ thống]
+        ReportApproved -->|Bằng khống từ Recruiter| SubmitEvent
+        
+        %% Luồng tích hợp trực tiếp từ US-2 (Thu hồi văn bằng)
+        ChoiceEvent -->|Lệnh Thu hồi bằng US-2| CheckUS2State{Trạng thái văn bằng \n lúc thực hiện?}
+        
+        %% Phân định theo trạng thái gốc của US-2
+        CheckUS2State -->|Pending_Confirmation| FastTrackUS2[Áp dụng miễn trừ: \n Bằng chưa lên chuỗi]
+        CheckUS2State -->|Confirmed| NormalTrackUS2{Phân tích lý do \n Thu hồi văn bằng?}
+        
+        %% Phân định theo trách nhiệm lỗi của US-2 (AC4 - US-2 & AC1, AC2 - US-5)
+        NormalTrackUS2 -->|Lỗi do CSDT \n Sai sót nội bộ| SubmitEvent
+        NormalTrackUS2 -->|Lỗi do Sinh viên \n Kỷ luật, gian lận| FastTrackUS2
+        
+        FastTrackUS2 --> KeepScore[Xác định giữ nguyên điểm cũ \n Ghi nhận Miễn trừ]
+        KeepScore --> SubmitEvent
+        
+        %% Kết thúc luồng lắng nghe sự kiện
+        EndSync([ ])
+    end
+
+    %% Cột 2: Bộ xử lý tính toán trung tâm (System Engine)
+    subgraph System_Lane [Hệ thống - Web API & CSDL]
+        direction TB
+        SystemAnchor[ ] ---- AnalyzeSource{Phân tích nguồn \n và lý do sự kiện?}
+        style SystemAnchor fill:none,stroke:none,color:#fff;
+        
+        SubmitEvent ----> AnalyzeSource
+        
+        %% Phân loại và tính toán điểm số (AC1 & AC2)
+        AnalyzeSource -->|Báo cáo Sinh viên đúng \n hoặc CSDT tự thu hồi| CalcMinorPenalty[Tính toán trừ điểm nhẹ: \n Lỗi nhập liệu hành chính]
+        AnalyzeSource -->|Báo cáo Recruiter đúng \n Cấp khống văn bằng| CalcMajorPenalty[Tính toán trừ điểm nặng: \n Gian lận dữ liệu hệ thống]
+        AnalyzeSource -->|Trường hợp Miễn trừ \n Lỗi sinh viên / Chưa lên chuỗi| CalcExemption[Giữ nguyên giá trị \n điểm số hiện tại]
+        
+        %% ĐÃ SỬA: Tất cả kết quả từ 3 nhánh tính toán đều hội tụ đi thẳng vào CSDL
+        CalcMinorPenalty --> UpdateLocalDB[(CSDL: Cập nhật Điểm số mới \n vào bảng thông tin CSDT)]
+        CalcMajorPenalty --> UpdateLocalDB
+        CalcExemption --> UpdateLocalDB
+        
+        %% Xử lý sau khi cập nhật lưu trữ đồng bộ (AC3)
+        UpdateLocalDB --> TriggerAsync[Kích hoạt tiến trình ngầm \n đóng băng lịch sử biến động]
+        UpdateLocalDB --> WriteLog[Ghi nhật ký hành vi chung: \n ActionType = 'REPUTATION_CHANGED' AC4]
+        
+        WriteLog --> EndSync
+    end
+
+    %% Cột 3: Tiến trình đóng băng bất biến (Background Queue & Blockchain)
+    subgraph Background_Lane [Mạng lưới lưu trữ bất biến]
+        direction TB
+        BackgroundAnchor[ ] ---- FetchAsync[Nhận tác vụ đồng bộ lịch sử điểm]
+        style BackgroundAnchor fill:none,stroke:none,color:#fff;
+        
+        TriggerAsync -.->|Trigger Async AC3| FetchAsync
+        
+        %% Cơ chế đóng băng biến động điểm số (AC3)
+        FetchAsync --> PreparePayload[Đóng gói dữ liệu: ID Trường, \n Điểm cũ, Điểm mới, Lý do giải trình]
+        PreparePayload --> FreezeNetwork[Gửi giao dịch bất đồng bộ \n lên mạng lưới chuỗi liên minh]
+        
+        FreezeNetwork --> CheckTx{Mạng lưới \n ghi nhận \n thành công?}
+        CheckTx -->|Thành công| ConfirmFreeze[Đóng băng lịch sử biến động \n điểm số thành công]
+        CheckTx -->|Thất bại| QueueRetry[Xếp hàng đợi \n tự động thử lại]
+        
+        ConfirmFreeze --> EndAsync([ ])
+        QueueRetry --> EndAsync
+    end
+
+    %% --- ĐƯỜNG NEO ẨN (CRITICAL): ÉP THỨ TỰ TỪ TRÁI SANG PHẢI VÀ PHẲNG ĐỂ LÀN BẰNG NHAU ---
+    Start ~~~ SystemAnchor
+    SystemAnchor ~~~ BackgroundAnchor
+    
+    EndSync ~~~ WriteLog
+    WriteLog ~~~ EndAsync
+
+    %% --- ĐỊNH DẠNG STYLE TRỰC QUAN ---
+    classDef cleanStyle fill:#ffffff,stroke:#333333,stroke-width:1.5px,color:#000000;
+    class ChoiceEvent,ReportApproved,CheckUS2State,FastTrackUS2,NormalTrackUS2,KeepScore,SubmitEvent cleanStyle;
+    class AnalyzeSource,CalcMinorPenalty,CalcMajorPenalty,CalcExemption,UpdateLocalDB,TriggerAsync,WriteLog cleanStyle;
+    class FetchAsync,PreparePayload,FreezeNetwork,CheckTx,ConfirmFreeze,QueueRetry cleanStyle;
+
+    style Start fill:#000,stroke:#000;
+    style EndSync fill:#000,stroke:#000;
+    style EndAsync fill:#000,stroke:#000;

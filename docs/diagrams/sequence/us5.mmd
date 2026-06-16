@@ -1,0 +1,74 @@
+sequenceDiagram
+    autonumber
+    participant US2_4 as Nguồn Sự Kiện (US-2 / US-4)
+    participant API as System Engine (Web API)
+    participant DB as CSDL Truyền thống
+    participant Q as Background Queue
+    participant BC as Mạng lưới Chuỗi (Blockchain)
+
+    %% --- GIAI ĐOẠN 1: KÍCH HOẠT VÀ TÍNH TOÁN ĐỒNG BỘ ---
+    Note over US2_4, API: [Giai đoạn 1]: Lắng nghe sự kiện kích hoạt hệ thống (AC1)
+    alt Kịch bản cần phạt điểm (Lỗi từ CSDT hoặc Khiếu nại được duyệt đúng)
+        US2_4->>+API: Trigger Event: OnReputationRecalculationNeeded(CSDT_ID, PenaltyType)
+    else Kịch bản Miễn trừ (Lỗi từ Sinh viên - AC2)
+        US2_4->>API: Trigger Event: OnReputationRecalculationNeeded(CSDT_ID, Type: Exemption)
+    end
+    activate API
+
+    API->>+DB: Query: Lấy Điểm uy tín hiện tại (CurrentScore)
+    DB-->>-API: Trả về CurrentScore
+    
+    Note over API: Thực hiện thuật toán phân định điểm số (AC1 & AC2)
+    alt Loại phạt: Trừ điểm nhẹ (Lỗi hành chính)
+        API->>API: NewScore = CurrentScore - MinorPoints
+    else Loại phạt: Trừ điểm nặng (Gian lận dữ liệu)
+        API->>API: NewScore = CurrentScore - MajorPoints
+    else Diện miễn trừ trách nhiệm
+        API->>API: NewScore = CurrentScore (Giữ nguyên điểm)
+    end
+
+    %% CẬP NHẬT ĐIỂM MỚI ĐỒNG BỘ PHỤC VỤ TRUY VẤN NHANH (AC3)
+    API->>+DB: Update: Cập nhật Điểm số mới (NewScore) vào bảng CSDT
+    DB-->>-API: Xác nhận cập nhật thành công
+    
+    %% KHỞI TẠO BẢN GHI LỊCH SỬ BIẾN ĐỘNG Ở TRẠNG THÁI PENDING_FREEZE
+    API->>+DB: Tạo lịch sử biến động điểm (Status = 'Pending_Freeze', OldScore, NewScore, Reason)
+    DB-->>-API: Xác nhận lưu trữ thành công (HistoryID)
+    
+    API->>+DB: Ghi nhật ký hệ thống hành vi chung (ActionType = "REPUTATION_CHANGED")
+    DB-->>-API: Xác nhận thành công
+    
+    %% ĐẨY VÀO HÀNG ĐỢI ĐỂ CHUẨN BỊ ĐÓNG BĂNG LÊN CHUỖI
+    API->>+Q: Push Task: Enqueue({HistoryID, CSDT_ID, OldScore, NewScore, Reason})
+    Q-->>-API: Xác nhận nhận Task thành công
+    
+    API-->>-US2_4: Phản hồi hoàn tất xử lý luồng đồng bộ
+    deactivate API
+
+    %% --- GIAI ĐOẠN 2: XỬ LÝ NGẦM ĐÓNG BĂNG LÊN BLOCKCHAIN ---
+    Note over Q, BC: [Giai đoạn 2]: Đóng băng lịch sử điểm từ Pending sang Frozen (AC3)
+    loop Worker tiêu thụ Task đóng băng từ Queue
+        Q->>+API: Worker: Kích hoạt tác vụ (Consume Freeze Task)
+        activate API
+        
+        API->>API: Đóng gói dữ liệu PayloadHash = Hash(CSDT_ID + OldScore + NewScore + Reason)
+        
+        API->>+BC: Gửi giao dịch đóng băng: SmartContract.freezeReputationHistory(CSDT_ID, PayloadHash)
+        activate BC
+        BC-->>-API: Trả về kết quả giao dịch (TxHash, Status: Success/Fail)
+        deactivate BC
+        
+        alt Mạng lưới xác nhận giao dịch thành công (AC3)
+            %% CHUYỂN TỪ TRẠNG THÁI TẠM THỜI SANG TRẠNG THÁI CUỐI BẤT BIẾN
+            API->>+DB: Update Lịch sử (HistoryID) sang Status = 'Frozen' & Gắn mã TxHash
+            DB-->>-API: Xác nhận cập nhật CSDL thành công
+        else Mạng lưới gặp lỗi / Từ chối giao dịch (AC3)
+            %% CHUYỂN SANG TRẠNG THÁI LỖI ĐỂ TỰ ĐỘNG RETRY
+            API->>+DB: Update Lịch sử (HistoryID) sang Status = 'Freeze_Error'
+            DB-->>-API: Xác nhận cập nhật CSDL thành công
+            API->>Q: Đẩy lại Task vào hàng đợi để tự động thử lại sau (Retry Queue)
+        end
+        
+        API-->>-Q: Xác nhận hoàn tất xử lý tác vụ (ACK Task)
+        deactivate API
+    end

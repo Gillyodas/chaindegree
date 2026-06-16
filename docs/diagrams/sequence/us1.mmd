@@ -1,0 +1,70 @@
+sequenceDiagram
+    autonumber
+    actor R as Registrar (Giáo vụ CSDT)
+    participant UI as Frontend Client
+    participant API as Web API Server
+    participant DB as CSDL Truyền thống
+    participant Q as Background Queue (RabbitMQ/Kafka)
+    participant BC as Mạng lưới Chuỗi (Blockchain)
+
+    %% --- GIAI ĐOẠN 1: KIỂM TRA ĐIỀU KIỆN & TIẾP NHẬN ĐỒNG BỘ ---
+    Note over R, UI: [Giai đoạn 1]: Thao tác nhập liệu và gửi yêu cầu
+    R->>UI: Nhập dữ liệu văn bằng & Nhấn nút [Cấp bằng]
+    activate UI
+    UI->>UI: Kiểm tra Client-side (Đầy đủ thông tin bắt buộc - AC1)
+    
+    UI->>+API: POST /api/v1/degrees (Payload: PlainData, StudentID, CSDT_ID)
+    
+    Note over API, DB: Kiểm tra Phân quyền & Trùng lặp (AC1 & AC3)
+    API->>+DB: Query: Kiểm tra quyền Registrar & Check bằng cùng loại tồn tại?
+    DB-->>-API: Kết quả trả về (Quyền hợp lệ / Trạng thái bằng cấp)
+    
+    alt Trường hợp thất bại: Bằng cấp cùng loại đã tồn tại (AC3)
+        API-->>UI: 409 Conflict (Error: Bằng cấp cùng loại đã tồn tại cho SV này)
+        UI-->>R: Giữ nguyên form, hiển thị thông báo lỗi đỏ cạnh bản ghi bị trùng
+    else Trường hợp hợp lệ: Tiến hành cấp bằng (AC2)
+        API->>API: Tạo mã muối ngẫu nhiên (Generate Salt)
+        API->>API: Tính mã băm mật mã: DataHash = Hash(PlainData + Salt)
+        
+        Note over API, DB: Lưu trữ trạng thái tạm thời và ghi nhật ký (AC2, AC5)
+        API->>+DB: Lưu văn bằng (Status = 'Pending_Confirmation', DataHash, Salt)
+        DB-->>-API: Xác nhận lưu trữ thành công (Trả về DegreeID)
+        
+        API->>+DB: Ghi nhật ký hệ thống (ActionType = "CREATE_DEGREE", DegreeID)
+        DB-->>-API: Xác nhận ghi Log thành công
+        
+        Note over API, Q: Đẩy tác vụ vào hàng đợi xử lý ngầm (AC2)
+        API->>+Q: Push Task: Enqueue({DegreeID, DataHash})
+        Q-->>-API: Xác nhận đã nhận Task vào hàng đợi
+        
+        API-->>UI: 202 Accepted (Trả về JSON thành công kèm danh sách xử lý)
+        deactivate API
+        UI-->>R: Hiển thị Toast: "Đã tiếp nhận thành công. Đang tiến hành xác thực ngầm." & Làm sạch form
+        deactivate UI
+    end
+
+    %% --- GIAI ĐOẠN 2: TIẾN TRÌNH XỬ LÝ NGẦM BẤT ĐỒNG BỘ ---
+    Note over Q, BC: [Giai đoạn 2]: Xử lý xác thực nền bất đồng bộ (AC4)
+    loop Worker lặp luồng xử lý các Task trong Queue
+        Q->>+API: Worker: Kích hoạt tiêu thụ phần tử (Consume Task)
+        activate API
+        
+        API->>+BC: Gửi giao dịch chứa mã băm: SmartContract.anchorDegree(DataHash)
+        activate BC
+        Note over BC: Mạng lưới tiến hành \n đào block / đồng thuận
+        BC-->>-API: Trả về kết quả giao dịch (TxHash, Status: Success/Fail)
+        deactivate BC
+        
+        alt Mạng lưới xác nhận giao dịch thành công (AC4)
+            API->>+DB: Update trạng thái sang 'Confirmed' & Gắn mã định danh TxHash
+            DB-->>-API: Xác nhận cập nhật CSDL
+            Note over UI, DB: Giao diện hiển thị Badge màu xanh: 🟢 Confirmed
+        else Mạng lưới từ chối / Giao dịch lỗi (AC4)
+            API->>+DB: Update trạng thái sang 'Confirmation_Error'
+            DB-->>-API: Xác nhận cập nhật CSDL
+            Note over UI, DB: Giao diện hiển thị Badge màu đỏ: 🔴 Confirmation_Error (Hiện nút [Thử lại])
+        end
+        
+        API-->>-Q: Xác nhận hoàn tất xử lý tác vụ (ACK Task)
+        deactivate API
+    end

@@ -1,0 +1,76 @@
+graph TD
+    %% --- ĐỊNH VỊ PHÂN LÀN DỌC SONG SONG (TỪ TRÁI SANG PHẢI) ---
+    
+    %% Cột 1: Ngoài cùng bên trái
+    subgraph Registrar_Lane ["Registrar Lane"]
+        direction TB
+        Start(["Start"]) --> InputData["Input Data"]
+        InputData --> ClickSubmit["Submit"]
+        
+        %% Điểm tiếp nhận phản hồi từ hệ thống
+        ReceiveToast["Toast"] --> ClearForm["Clear Form"]
+        ClearForm --> EndSync(["End Sync"])
+        
+        %% Luồng hiển thị lỗi trả về UI
+        ShowInvalidError["Invalid Error"] --> InputData
+        RejectDuplicate["Duplicate"] --> InputData
+    end
+
+    %% Cột 2: Ở giữa
+    subgraph System_Lane ["System Lane"]
+        direction TB
+        %% Đã sửa: Thay ----> bằng ---- để xóa mũi tên dư của điểm neo ẩn
+        SystemAnchor(["System"])
+        SystemAnchor --> CheckRole{"Check Role"}
+        
+        CheckRole -->|Không hợp lệ| ShowInvalidError
+        CheckRole -->|Hợp lệ| CheckDuplicate{"Check Duplicate"}
+        
+        CheckDuplicate -->|Đã tồn tại| RejectDuplicate
+        CheckDuplicate -->|Chưa tồn tại| GenerateCrypto["Crypto Generation"]
+        
+        GenerateCrypto --> SaveDB["Save DB"]
+        SaveDB --> QueuePush["Queue Push"]
+        SaveDB --> WriteLog["Write Log"]
+    end
+
+    %% Cột 3: Ngoài cùng bên phải
+    subgraph Background_Lane ["Background Lane"]
+        direction TB
+        %% Đã sửa: Thay ----> bằng ---- để xóa mũi tên dư của điểm neo ẩn
+        BackgroundAnchor(["Background"])
+        BackgroundAnchor --> FetchTask["Fetch Task"]
+
+        FetchTask --> PushNetwork["Push Network"]
+        PushNetwork --> CheckNetwork{"Check Network"}
+        
+        CheckNetwork -->|Thành công| UpdateConfirmed["Update Confirmed"]
+        CheckNetwork -->|Thất bại| UpdateError["Update Error"]
+        
+        UpdateConfirmed --> EndAsync(["End Async"])
+        UpdateError --> EnableRetry["Enable Retry"]
+        EnableRetry --> EndAsync
+    end
+
+    %% --- ĐƯỜNG KẾT NỐI NGHIỆP VỤ GIỮA CÁC CỘT ---
+    ClickSubmit --> CheckRole
+    QueuePush --> ReceiveToast
+    QueuePush -.->|Trigger Async| FetchTask
+
+    %% --- ĐƯỜNG NEO ẨN (CRITICAL): ÉP THỨ TỰ TỪ TRÁI SANG PHẢI VÀ BẰNG NHAU ---
+    Start ~~~ SystemAnchor
+    SystemAnchor ~~~ BackgroundAnchor
+    
+    %% Kéo giãn đáy của các cột để đảm bảo các làn vuông vức, bằng nhau
+    EndSync ~~~ WriteLog
+    WriteLog ~~~ EndAsync
+
+    %% --- ĐỊNH DẠNG STYLE TRỰC QUAN ---
+    classDef cleanStyle fill:#ffffff,stroke:#333333,stroke-width:1.5px,color:#000000;
+    class InputData,ClickSubmit,ReceiveToast,ClearForm,ShowInvalidError,RejectDuplicate cleanStyle;
+    class CheckRole,CheckDuplicate,GenerateCrypto,SaveDB,QueuePush,WriteLog cleanStyle;
+    class FetchTask,PushNetwork,CheckNetwork,UpdateConfirmed,UpdateError,EnableRetry cleanStyle;
+
+    style Start fill:#000,stroke:#000;
+    style EndSync fill:#000,stroke:#000;
+    style EndAsync fill:#000,stroke:#000;

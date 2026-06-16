@@ -176,3 +176,104 @@ Mọi hành vi thay đổi dữ liệu hoặc tác động hệ thống từ cá
 #### Giao diện sơ bộ (UX/UI Mockup Flow)
 * **Giao diện Sinh viên ứng tuyển:** Khi bấm ứng tuyển nhanh, nếu hệ thống quét thấy bằng cấp của ứng viên không khớp bộ lọc bài đăng, một Popup Modal cảnh báo màu vàng ⚠️ sẽ hiện lên: *"Bạn chưa có bằng cấp phù hợp với yêu cầu bắt buộc của nhà tuyển dụng. Bạn vẫn muốn nộp hồ sơ chứ? (Hồ sơ của bạn sẽ xếp ở nhóm ưu tiên thấp hơn)"*. Nếu bấm [Vẫn nộp], hệ thống xử lý thành công.
 * **Giao diện Nhà tuyển dụng duyệt hồ sơ:** Danh sách ứng viên được chia làm 2 tab rõ rệt hoặc hiển thị từ trên xuống dưới theo thứ tự ưu tiên: Nhóm văn bằng đạt chuẩn xếp lên trên, nhóm văn bằng chưa đạt chuẩn (nhãn vàng) xếp xuống dưới.
+
+---
+
+Dưới đây là cẩm nang chi tiết phân tích tất cả các kịch bản Cơ sở đào tạo (CSDT) có thể bị báo cáo bởi Sinh viên và Nhà tuyển dụng (Recruiter), đi kèm với phương pháp phát hiện thực tế để bạn lưu lại làm tài liệu đặc tả nghiệp vụ cho dự án.
+
+---
+
+# CẨM NANG NGHIỆP VỤ: DANH SÁCH KỊCH BẢN BÁO CÁO VI PHẠM CỦA CSDT
+
+*Tài liệu hỗ trợ xây dựng luồng logic cho US-4 và US-5 trong Hệ thống Xác thực Văn bằng Số*
+
+---
+
+## I. GÓC NHÌN TỪ SINH VIÊN (STUDENT)
+
+*Sinh viên chỉ có quyền báo cáo đối với các văn bằng thuộc sở hữu của chính mình (AC1 - US-4). Mục tiêu của sinh viên là bảo vệ quyền lợi học tập cá nhân và tính chính xác của hồ sơ.*
+
+### 1. Sai sót thông tin định danh cá nhân (Lỗi Hành chính)
+
+* **Mô tả hành vi:** Văn bằng được cấp trên hệ thống chứa thông tin cá nhân không trùng khớp với giấy tờ pháp lý (CCCD/Hộ chiếu).
+* **Cách sinh viên phát hiện:**
+* **Phát hiện trực quan trên UI:** Khi sinh viên đăng nhập vào hệ thống, truy cập màn hình "Văn bằng của tôi", họ nhìn thấy họ tên bị sai chính tả (ví dụ: `Nguyễn Văn An` thành `Nguyễn Văn Anh`), sai ngày tháng năm sinh, hoặc sai số CCCD định danh.
+* **Khi quét mã QR:** Sinh viên thử dùng tính năng quét mã QR in trên phôi bằng giấy, trang kết quả trả về hiển thị thông tin bị lệch so với thực tế.
+
+
+
+### 2. Sai lệch kết quả học tập / Nội dung chuyên môn
+
+* **Mô tả hành vi:** Thông tin về ngành đào tạo, chuyên ngành, xếp loại tốt nghiệp (Xuất sắc/Giỏi/Khá) hoặc điểm số GPA tích lũy trên văn bằng số bị ghi nhận thấp hơn hoặc sai lệch so với kết quả gốc trong sổ điểm của sinh viên.
+* **Cách sinh viên phát hiện:**
+* **Đối chiếu dữ liệu (Cross-checking):** Sinh viên đối chiếu thông tin trên cổng xác thực với **Bảng điểm học tập (Transcript)** được xuất từ phòng Khảo thí của trường hoặc đối chiếu với điểm số hiển thị trên Portal Quản lý đào tạo nội bộ.
+* *Ví dụ:* Điểm tích lũy thực tế là $3.6/4.0$ (Xếp loại Giỏi) nhưng văn bằng số hệ thống trả về là $3.1/4.0$ (Xếp loại Khá).
+
+
+
+### 3. Nghi vấn tài khoản giáo vụ bị xâm nhập (Hacker can thiệp)
+
+* **Mô tả hành vi:** Xuất hiện một văn bằng "lạ" được gán cho tài khoản/số định danh của sinh viên mà sinh viên chưa từng học hoặc chưa đủ điều kiện tốt nghiệp, hoặc văn bằng cũ đột ngột bị sửa thông tin bất thường.
+* **Cách sinh viên phát hiện:**
+* **Thông báo hệ thống (System Notification):** Hệ thống bắn thông báo email/toast thông báo *"Văn bằng của bạn đã được cập nhật"* hoặc *"Bạn được cấp một văn bằng mới"*. Sinh viên vào kiểm tra phát hiện ngành học lạ hoắc (ví dụ: Sinh viên học CNTT nhưng nhận được bằng Ngôn ngữ Anh) hoặc thời gian cấp bằng bất hợp lý. Điều này báo hiệu có thể database tập trung của trường đã bị SQL Injection hoặc tài khoản cán bộ Registrar bị lộ, dẫn đến dữ liệu đầu vào bị phá hoại.
+
+
+
+---
+
+## II. GÓC NHÌN TỪ NHÀ TUYỂN DỤNG (RECRUITER)
+
+*Nhà tuyển dụng được quyền báo cáo bất kỳ văn bằng nào họ tiếp cận để bảo vệ chất lượng nguồn nhân lực và phát hiện các CSDT thiếu uy tín (AC1 - US-4).*
+
+### 1. Gian lận cấp bằng khống / Bán bằng (Credential Fraud)
+
+* **Mô tả hành vi:** CSDT cố ý cấp bằng hợp pháp (có ký số, có băm đẩy lên Blockchain) cho một cá nhân không hề trải qua quá trình đào tạo, thi cử tại trường để trục lợi.
+* **Cách Recruiter phát hiện:**
+* **Kiểm tra lý lịch ngầm (Reference Check):** Khi ứng viên nộp hồ sơ, Recruiter quét mã QR, hệ thống trả về kết quả **Hợp lệ 🟢 Confirmed** (vì trường chủ động làm đúng quy trình kỹ thuật). Tuy nhiên, khi Recruiter thực hiện liên hệ với các bên liên quan để xác minh:
+* Gọi điện/email cho Giảng viên chủ nhiệm hoặc Trưởng bộ môn của ngành đó tại trường để hỏi về sinh viên này, giảng viên xác nhận *"Khóa này không có sinh viên nào tên như vậy"*.
+* Kiểm tra danh sách sinh viên thực tập, danh sách đóng học phí lịch sử (nếu có thể yêu cầu ứng viên cung cấp bổ sung) nhưng hoàn toàn trống không.
+* Phỏng vấn trực tiếp chuyên môn (Technical Interview), ứng viên có bằng Xuất sắc nhưng không trả lời được các câu hỏi căn bản nhất, bộc lộ hành vi mua bằng.
+
+
+
+
+
+### 2. Sự bất nhất giữa Bảng điểm gốc và Văn bằng trên Hệ thống
+
+* **Mô tả hành vi:** CSDT chỉnh sửa trạng thái xét duyệt tốt nghiệp bằng tay (Override logic) để cấp bằng cho sinh viên chưa đủ điều kiện tốt nghiệp (Nợ môn, nợ chứng chỉ chuẩn đầu ra như VSTEP, Tin học).
+* **Cách Recruiter phát hiện:**
+* **Đối chiếu tài liệu cứng:** Khâu tuyển dụng yêu cầu ứng viên nộp cả **Văn bằng số** và **Bảng điểm gốc (Hardcopy có mộc đỏ)**. Recruiter dùng cổng tra cứu xác thực văn bằng số trả về kết quả khớp, nhưng khi cộng tổng số tín chỉ trên bảng điểm mộc đỏ thì phát hiện ứng viên mới tích lũy được 110/130 tín chỉ, hoặc có 2 môn chuyên ngành bị điểm $F$ chưa học cải thiện.
+* Điều này chứng tỏ khâu duyệt cấp bằng của CSDT có sự gian dối, "châm chước" bất hợp pháp cho sinh viên.
+
+
+
+### 3. Gian lận thay đổi thông tin sau khi phát hành (Post-issuance Manipulation)
+
+* **Mô tả hành vi:** CSDT âm thầm sửa đổi dữ liệu dưới CSDL tập trung để nâng điểm hoặc đổi loại bằng cho sinh viên sau khi đã bị Recruiter phát hiện nghi vấn trước đó.
+* **Cách Recruiter phát hiện:**
+* **Lịch sử đối chiếu (Snapshot Mismatch):** Vòng phỏng vấn 1, Recruiter tra cứu mã số bằng hiển thị loại Khá (Dữ liệu chưa lên chuỗi hoặc đã lên chuỗi nhưng Recruiter lưu lại ảnh chụp). Vòng phỏng vấn 2 (sau 1 tuần), Recruiter tra cứu lại thì thấy bằng đổi thành loại Giỏi.
+* Nếu hệ thống kích hoạt **Cơ chế đối chiếu kép (AC2 - US-3)** và phát hiện mã băm dưới DB lệch với Blockchain, hệ thống sẽ tự nhấp nháy khung cam cảnh báo `🟠 ĐƠN VỊ BỊ CAN THIỆP`. Nhưng nếu CSDT cố tình chạy luồng `US-2` để hợp thức hóa việc sửa trên chuỗi, Recruiter sẽ phát hiện ra sự bất hợp lý về mặt thời gian (Tại sao bằng tốt nghiệp năm 2024 lại vừa có giao dịch cập nhật trạng thái mới tinh trên chuỗi vào năm 2026?).
+
+
+
+### 4. CSDT hoạt động "chui" / Bị tước giấy phép đào tạo
+
+* **Mô tả hành vi:** CSDT đã bị Cơ quan Thẩm quyền tối cao (Bộ GD&ĐT) đình chỉ tuyển sinh hoặc tước giấy phép cấp văn bằng do vi phạm pháp luật, nhưng hệ thống cục bộ của trường vẫn cố tình phát hành lệnh cấp bằng mới.
+* **Cách Recruiter phát hiện:**
+* **Cập nhật danh mục Blacklist:** Nhà tuyển dụng theo dõi thông tin đại chúng hoặc danh mục quản lý các trường của Bộ. Khi họ nhận được hồ sơ của một ứng viên tốt nghiệp năm 2026 tại một trường đã bị đóng cửa từ năm 2025, dù hệ thống của trường đó vẫn báo `Confirmed`, Recruiter lập tức gửi báo cáo vi phạm để ghim vết điều tra.
+
+
+
+---
+
+## III. MA TRẬN XỬ LÝ SỰ KIỆN KHI CÓ BÁO CÁO (KẾT NỐI US-4 ĐẾN US-5)
+
+Để bạn dễ thiết kế Database và viết Code cho `System Engine` (US-5), dưới đây là bảng ma trận quy định hành vi tự động phạt điểm uy tín:
+
+| ID Kịch bản | Bên báo cáo | Loại vi phạm | Trạng thái xác minh | Tác động Điểm uy tín CSDT (`US-5`) |
+| --- | --- | --- | --- | --- |
+| **S-01** | Sinh viên | Sai thông tin định danh | Đúng (Approved) | **Trừ điểm nhẹ** (Lỗi hành chính, cẩu thả nhập liệu) |
+| **S-02** | Sinh viên | Sai kết quả học tập | Đúng (Approved) | **Trừ điểm nhẹ** (Sai sót nội bộ khâu quản lý đào tạo) |
+| **R-01** | Recruiter | Bằng khống / Bán bằng | Đúng (Approved) | **TRỪ ĐIỂM NẶNG + ĐÓNG BĂNG** (Gian lận hệ thống nghiêm trọng) |
+| **R-02** | Recruiter | Bằng cấp sai tiêu chuẩn | Đúng (Approved) | **TRỪ ĐIỂM NẶNG** (Cố ý làm sai lệch quy chế đào tạo) |
+| **H-01** | Cả hai | CSDL nền tảng bị hack | Đúng (Approved) | **Đóng băng điểm uy tín tạm thời** để tiến hành kiểm toán bảo mật |

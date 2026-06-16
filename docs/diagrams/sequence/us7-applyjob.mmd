@@ -1,0 +1,69 @@
+sequenceDiagram
+    autonumber
+    actor S as Sinh viên (Candidate)
+    participant UI as Cổng Việc Làm (UI)
+    participant API as Web API Server
+    participant DB as CSDL Truyền thống
+
+    %% --- GIAI ĐOẠN 1: BẤM ỨNG TUYỂN VÀ KIỂM TRA BAN ĐẦU ---
+    Note over S, UI: [Giai đoạn 1]: Sinh viên chọn văn bằng đối chiếu và nộp hồ sơ
+    S->>UI: Nhấn nút [Ứng tuyển nhanh] tại bài đăng
+    activate UI
+    UI->>UI: Hiển thị danh sách văn bằng của SV để chọn một mã đối chiếu
+    S->>UI: Chọn mã văn bằng + Nhấn [Xác nhận nộp]
+    
+    UI->>+API: POST /api/v1/applications (Payload: JobID, DegreeID)
+    activate API
+    
+    Note over API, DB: Truy vấn thông tin cấu hình bộ lọc tuyển dụng và trạng thái văn bằng
+    API->>+DB: Query: Lấy bộ lọc Job (US-6) & Thông tin, Trạng thái của DegreeID
+    DB-->>-API: Trả về (JobFilters, DegreeData, DegreeStatus)
+    
+    %% TÌNH HUỐNG CHẶN GIAN LẬN (AC1)
+    Note over API: Kiểm tra dấu hiệu gian lận bằng cấp (AC1)
+    alt Trường hợp Bằng cấp bị Thu hồi / Đang xử lý thu hồi (Revoked / Pending_Revocation)
+        API-->>UI: 422 Unprocessable Entity (Error: Văn bằng không hợp lệ hoặc đã bị thu hồi)
+        UI-->>S: Hiển thị thông báo lỗi nghiêm trọng, từ chối thẳng luồng ứng tuyển
+        
+    %% TÌNH HUỐNG ĐẠT CHUẨN KHỚP HOÀN TOÀN
+    else Trường hợp Văn bằng đạt chuẩn và khớp hoàn toàn bộ lọc (AC1)
+        Note over API, DB: Lưu trữ với nhãn ưu tiên cao & Ghi log kiểm toán (AC1, AC3)
+        API->>+DB: Lưu đơn ứng tuyển (Status = 'Highly_Qualified', JobID, StudentID)
+        DB-->>-API: Xác nhận lưu trữ thành công
+        
+        API->>+DB: Ghi nhật ký hệ thống (ActionType = "APPLY_JOB", Rank = "Highly_Qualified")
+        DB-->>-API: Xác nhận ghi Log thành công
+        
+        API-->>UI: 201 Created (Status: 'Highly_Qualified')
+        UI-->>S: Hiển thị Toast thông báo: "Ứng tuyển thành công (Hồ sơ đạt tiêu chuẩn)"
+        
+    %% TÌNH HUỐNG KHÔNG KHỚP / THIẾU BẰNG (LUỒNG LINH HOẠT)
+    else Trường hợp Không khớp hoặc Thiếu bằng cấp yêu cầu (AC1)
+        Note over API, UI: Phản hồi mã chờ để UI hiển thị Popup cảnh báo người dùng
+        API-->>UI: 202 Accepted (Status: 'Requirement_Not_Met_Warning')
+        deactivate API
+        
+        UI-->>S: Hiển thị Popup Modal ⚠️ màu vàng hỏi ý kiến: "Bạn chưa đạt chuẩn. Vẫn muốn nộp?"
+        
+        alt Người dùng hủy bỏ thao tác nộp
+            S->>UI: Bấm nút [Hủy bỏ]
+            UI->>UI: Đóng Popup, giữ nguyên màn hình bài đăng
+        else Người dùng quyết tâm nộp cưỡng bức (Force Submit)
+            S->>UI: Bấm nút [Vẫn nộp]
+            
+            UI->>+API: POST /api/v1/applications/force-submit (Payload: JobID, DegreeID)
+            activate API
+            
+            Note over API, DB: Lưu trữ với nhãn xếp hạng thấp dưới DB truyền thống (AC1, AC3)
+            API->>+DB: Lưu đơn ứng tuyển (Status = 'Under_Qualified', JobID, StudentID)
+            DB-->>-API: Xác nhận lưu trữ thành công
+            
+            API->>+DB: Ghi nhật ký hệ thống (ActionType = "APPLY_JOB", Rank = "Under_Qualified")
+            DB-->>-API: Xác nhận ghi Log thành công
+            
+            API-->>UI: 201 Created (Status: 'Under_Qualified')
+            deactivate API
+            UI-->>S: Đóng Popup & Hiển thị Toast: "Ứng tuyển thành công (Hồ sơ thuộc nhóm xếp hạng thấp hơn)"
+            deactivate UI
+        end
+    end

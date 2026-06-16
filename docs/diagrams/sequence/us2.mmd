@@ -1,0 +1,106 @@
+sequenceDiagram
+    autonumber
+    actor R as Registrar (Giáo vụ CSDT)
+    participant UI as Frontend Client
+    participant API as Web API Server
+    participant DB as CSDL Truyền thống
+    participant Q as Background Queue (RabbitMQ)
+    participant BC as Mạng lưới Chuỗi (Blockchain)
+
+    %% --- GIAI ĐOẠN 1: TIẾP NHẬN YÊU CẦU & PHÂN LUỒNG XỬ LÝ ĐỒNG BỘ ---
+    Note over R, UI: [Giai đoạn 1]: Chọn văn bằng và gửi lệnh thay đổi
+    R->>UI: Chọn Văn bằng + Nhập lý do thay đổi + Nhấn [Cập nhật]/[Thu hồi]
+    activate UI
+    UI->>UI: Kiểm tra Client-side (Bắt buộc chọn/nhập lý do thay đổi - AC1)
+    
+    UI->>+API: POST /api/v1/degrees/{id}/alteration (Payload: ActionType, Reason, NewData)
+    
+    Note over API, DB: Kiểm tra Điều kiện tiên quyết & Quyền quản lý (AC1)
+    API->>+DB: Query: Kiểm tra quyền Registrar & Trạng thái văn bằng mục tiêu
+    DB-->>-API: Trả về thông tin văn bằng (Status, Owner_CSDT_ID)
+    
+    alt Trường hợp 1: Không có quyền hoặc Trạng thái không hợp lệ (AC1)
+        API-->>UI: 403 Forbidden / 400 Bad Request
+        UI-->>R: Hiển thị lỗi thông báo từ chối thao tác
+    else Trường hợp 2: Trạng thái gốc là Pending_Confirmation (XỬ LÝ NHANH CHẠY NGAY - AC3)
+        Note over API, DB: Nhánh Shortcut (Bằng chưa lên chuỗi - AC3)
+        alt Hành động là THU HỒI
+            API->>+DB: Update Status = 'Revoked' & Hủy tác vụ cũ trong Queue (hoặc ghi đè)
+            DB-->>-API: Xác nhận cập nhật thành công
+        else Hành động là CẬP NHẬT
+            API->>API: Tính toán mã băm mới: DataHash_New = Hash(NewData + Salt)
+            API->>+DB: Cập nhật thông tin mới & Đổi mã băm thành DataHash_New
+            DB-->>-API: Xác nhận cập nhật thành công
+        end
+        
+        Note over API, DB: Áp dụng quy tắc miễn trừ đánh giá uy tín (AC4, AC5)
+        API->>+DB: Ghi nhật ký hệ thống (ActionType = "REVOKE/UPDATE_DEGREE", IsExempt = true)
+        DB-->>-API: Xác nhận ghi Log thành công
+        
+        API-->>UI: 200 OK (Payload: Status = 'Revoked' hoặc 'Confirmed')
+        UI-->>R: Hiển thị Toast: "Thành công (Hệ thống miễn trừ đánh giá uy tín...)" & Đổi UI sang 🔴 Revoked
+        
+    else Trường hợp 3: Trạng thái gốc là Confirmed (ĐỒNG BỘ NGẦM HÀNG ĐỢI - AC2)
+        Note over API, DB: Nhánh đồng bộ qua chuỗi (Bằng đã lên chuỗi - AC2)
+        alt Hành động là THU HỒI
+            API->>+DB: Update Status = 'Pending_Revocation'
+            DB-->>-API: Xác nhận cập nhật
+        else Hành động là CẬP NHẬT
+            API->>+DB: Update Status = 'Pending_Update'
+            DB-->>-API: Xác nhận cập nhật
+        end
+        
+        Note over API, DB: Phân định trách nhiệm để tính toán uy tín ngầm (AC4)
+        alt Lỗi thuộc về CSDT (Sai sót nội bộ, nhập nhầm)
+            API->>API: Kích hoạt cờ phạt điểm uy tín (Trigger US-5)
+        else Lỗi thuộc về Sinh viên (Vi phạm kỷ luật, gian lận học tập)
+            API->>API: Giữ nguyên điểm uy tín của trường
+        end
+        
+        Note over API, DB: Ghi nhật ký hành vi chung & Đẩy vào hàng đợi (AC2, AC5)
+        API->>+DB: Ghi nhật ký hệ thống (ActionType = "REVOKE/UPDATE_DEGREE", PenaltyFlag)
+        DB-->>-API: Xác nhận ghi Log thành công
+        
+        API->>+Q: Push Alteration Task: Enqueue({DegreeID, ActionType, DataHash_New, PenaltyFlag})
+        Q-->>-API: Xác nhận đã nhận Task vào hàng đợi
+        
+        API-->>UI: 202 Accepted (Trạng thái tạm thời chuyển đổi)
+        deactivate API
+        UI-->>R: Hiển thị Toast: "Yêu cầu đã được tiếp nhận và đang đồng bộ ngầm." & Đổi UI sang 🟡 Pending_...
+        deactivate UI
+    end
+
+    %% --- GIAI ĐOẠN 2: TIẾN TRÌNH XỬ LÝ NGẦM BẤT ĐỒNG BỘ CHO TRƯỜNG HỢP CONFIRMED ---
+    Note over Q, BC: [Giai đoạn 2]: Đồng bộ trạng thái cuối lên Blockchain (AC2)
+    loop Worker tiêu thụ Task thay đổi trạng thái từ Queue
+        Q->>+API: Worker: Kích hoạt tiêu thụ phần tử (Consume Alteration Task)
+        activate API
+        
+        alt Có cờ PenaltyFlag = true (Lỗi do CSDT)
+            API->>API: Gọi Module US-5 để tự động tính toán trừ điểm uy tín của trường
+        end
+        
+        API->>+BC: Gửi giao dịch cập nhật trạng thái mới: SmartContract.updateDegreeState(DegreeID, NewStateHash)
+        activate BC
+        BC-->>-API: Trả về kết quả xác nhận từ Blockchain (TxHash, Status: Success/Fail)
+        deactivate BC
+        
+        alt Mạng lưới xác thực thành công (AC2)
+            alt Hành động gốc là THU HỒI
+                API->>+DB: Update Status = 'Revoked' & Gắn TxHash thay đổi
+                DB-->>-API: Xác nhận cập nhật
+                Note over UI, DB: Giao diện chuyển từ Vàng sang Đỏ hẳn: 🔴 Revoked
+            else Hành động gốc là CẬP NHẬT
+                API->>+DB: Update Status = 'Confirmed' & Gắn TxHash thay đổi
+                DB-->>-API: Xác nhận cập nhật
+                Note over UI, DB: Giao diện quay lại màu xanh: 🟢 Confirmed
+            end
+        else Mạng lưới từ chối / Giao dịch lỗi (AC2)
+            API->>+DB: Khôi phục lại trạng thái cũ trước khi thao tác (Rollback về Confirmed/Error)
+            DB-->>-API: Xác nhận cập nhật CSDL
+            Note over UI, DB: Giao diện cảnh báo lỗi đồng bộ chuỗi
+        end
+        
+        API-->>-Q: Xác nhận hoàn tất xử lý tác vụ (ACK Task)
+        deactivate API
+    end

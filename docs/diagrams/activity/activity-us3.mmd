@@ -1,0 +1,78 @@
+graph TD
+    %% --- ĐỊNH VỊ PHÂN LÀN DỌC SONG SONG (TỪ TRÁI SANG PHẢI) ---
+    
+    %% Cột 1: Ngoài cùng bên trái (Không yêu cầu đăng nhập)
+    subgraph Registrar_Lane [Sinh viên / Nhà tuyển dụng]
+        direction TB
+        Start([ ]) --> ChoiceInput{Phương thức tra cứu?}
+        
+        ChoiceInput -->|Quét mã QR| ScanQR[Quét QR trên văn bằng]
+        ChoiceInput -->|Nhập thủ công| EnterCode[Nhập mã định danh văn bằng]
+        
+        ScanQR --> SubmitQuery[Gửi yêu cầu tra cứu]
+        EnterCode --> SubmitQuery
+        
+        %% Các nhánh kết quả hiển thị trên UI
+        ShowValid[Hiển thị: Hợp lệ \n Khung viền Xanh lá cây 🟢] --> EndSync([ ])
+        ShowRevoked[Hiển thị: Đã bị thu hồi \n Khung viền Đỏ 🔴] --> EndSync
+        ShowTampered[CẢNH BÁO: Dữ liệu sai lệch \n Khung viền Cam nhấp nháy 🟠] --> EndSync
+        ShowNotFound[Hiển thị: Không tìm thấy văn bằng] --> EndSync
+    end
+
+    %% Cột 2: Ở giữa (Xử lý logic, đối chiếu dữ liệu tập trung)
+    subgraph System_Lane [Hệ thống - Web API & CSDL]
+        direction TB
+        SystemAnchor[ ] ---- FetchLocalDB[Truy vấn thông tin chi tiết, \n Salt & DataHash từ CSDL]
+        style SystemAnchor fill:none,stroke:none,color:#fff;
+        
+        SubmitQuery ----> FetchLocalDB
+        
+        FetchLocalDB --> CheckLocal{Tìm thấy bản ghi?}
+        CheckLocal -->|No| ShowNotFound
+        
+        %% Bắt đầu cơ chế đối chiếu kép
+        CheckLocal -->|Yes| CallNetwork[Gửi yêu cầu truy vấn chuỗi băm \n lên mạng lưới xác thực bất biến]
+        
+        %% Nhận kết quả từ mạng lưới phản hồi về cột giữa
+        ReceiveNetHash[Nhận chuỗi Hash từ Block mới nhất] --> CalculateHash["Tính toán lại chuỗi đối chiếu: \n Hash_Check = Hash(PlainData + Salt)"]
+        
+        CalculateHash --> VerifyCrypto{Hash_Check khớp với \n Hash từ mạng lưới?}
+        
+        %% Phân định kết quả xác thực
+        VerifyCrypto -->|Không khớp| ShowTampered
+        VerifyCrypto -->|Trùng khớp| CheckStatusDB{Trạng thái văn bằng \n trong CSDL?}
+        
+        CheckStatusDB -->|Confirmed| ShowValid
+        CheckStatusDB -->|Revoked| ShowRevoked
+        CheckStatusDB -->|Khác| ShowNotFound
+        
+        %% Ghi nhật ký hành vi song song
+        FetchLocalDB --> WriteLog[Ghi nhật ký hệ thống \n ActionType = 'VERIFY_DEGREE']
+    end
+
+    %% Cột 3: Ngoài cùng bên phải (Mạng lưới lưu trữ bất biến)
+    subgraph Background_Lane [Mạng lưới xác thực bất biến]
+        direction TB
+        BackgroundAnchor[ ] ---- QueryBlock[Tìm kiếm dữ liệu văn bằng \n theo mã định danh trên Chuỗi]
+        style BackgroundAnchor fill:none,stroke:none,color:#fff;
+        
+        CallNetwork ----> QueryBlock
+        QueryBlock --> ReadLatestBlock[Trích xuất mã băm dữ liệu gốc \n tại Block mới nhất]
+        ReadLatestBlock ----> ReceiveNetHash
+    end
+
+    %% --- ĐƯỜNG NEO ẨN (CRITICAL): ÉP THỨ TỰ TỪ TRÁI SANG PHẢI VÀ PHẲNG ĐỂ LÀN BẰNG NHAU ---
+    Start ~~~ SystemAnchor
+    SystemAnchor ~~~ BackgroundAnchor
+    
+    EndSync ~~~ WriteLog
+    WriteLog ~~~ ReadLatestBlock
+
+    %% --- ĐỊNH DẠNG STYLE TRỰC QUAN ---
+    classDef cleanStyle fill:#ffffff,stroke:#333333,stroke-width:1.5px,color:#000000;
+    class ChoiceInput,ScanQR,EnterCode,SubmitQuery,ShowValid,ShowRevoked,ShowTampered,ShowNotFound cleanStyle;
+    class FetchLocalDB,CheckLocal,CallNetwork,ReceiveNetHash,CalculateHash,VerifyCrypto,CheckStatusDB,WriteLog cleanStyle;
+    class QueryBlock,ReadLatestBlock cleanStyle;
+
+    style Start fill:#000,stroke:#000;
+    style EndSync fill:#000,stroke:#000;

@@ -1,0 +1,26 @@
+sequenceDiagram
+    autonumber
+    actor S as Sinh viên (Candidate)
+    participant UI as Cổng Việc Làm (UI)
+    participant API as Web API Server
+    participant DB as CSDL Truyền thống
+
+    Note over S, UI: Luồng tra cứu công khai hoặc định danh (AC2)
+    S->>UI: Truy cập trang Tìm kiếm việc làm / Nhập từ khóa
+    activate UI
+    
+    UI->>+API: GET /api/v1/jobs?search={keyword}
+    activate API
+    
+    Note over API, DB: Truy vấn kết hợp dữ liệu Doanh nghiệp và Điểm uy tín trường liên kết
+    API->>+DB: Query: Lấy danh sách Job phù hợp + Điểm uy tín của các CSDT liên kết với DN đó
+    DB-->>-API: Trả về tập dữ liệu thô (Jobs, Company_ID, Linked_CSDT_Scores[])
+    
+    Note over API: Thực thi Thuật toán Xếp hạng (Ranking Algorithm)
+    API->>API: SortJobs(): Trọng số điểm uy tín CSDT cao đưa Doanh nghiệp lên vị trí đầu (Top Featured)
+    
+    API-->>UI: 200 OK (Payload: Danh sách Jobs đã được phân hạng/sắp xếp)
+    deactivate API
+    
+    UI-->>S: Hiển thị danh sách việc làm (Tin tuyển dụng của DN có uy tín cao ở đầu)
+    deactivate UI

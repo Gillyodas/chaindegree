@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor R as Nhà tuyển dụng (Recruiter)
+    participant UI as Portal Doanh nghiệp (UI)
+    participant API as Web API Server
+    participant DB as CSDL Truyền thống
+
+    %% --- GIAI ĐOẠN 1: THAO TÁC TRÊN GIAO DIỆN VÀ KIỂM TRA PHÍA CLIENT ---
+    Note over R, UI: [Giai đoạn 1]: Thao tác cấu hình bài tuyển dụng và bộ lọc
+    R->>UI: Điền thông tin bài đăng + Nhấn [+ Thêm điều kiện bằng]
+    UI->>UI: Hiển thị danh mục cấu hình bộ lọc: Loại bằng, Chuyên ngành, Xếp loại (AC2)
+    R->>UI: Chọn tiêu chí bộ lọc văn bằng + Nhấn [Xác nhận đăng bài]
+    
+    UI->>+API: POST /api/v1/jobs (Payload: Title, Salary, DegreeFilters: [])
+    activate API
+    
+    %% --- GIAI ĐOẠN 2: XÁC THỰC VÀ KIỂM TRA ĐIỀU KIỆN TIÊN QUYẾT ---
+    Note over API, DB: [Giai đoạn 2]: Kiểm tra quyền hạn và tính toàn vẹn dữ liệu
+    API->>+DB: Query: Kiểm tra quyền Recruiter & Trạng thái xác thực DN (AC1)
+    DB-->>-API: Trả về trạng thái tài khoản (IsVerified, Role)
+    
+    alt Trường hợp 1: Tài khoản chưa xác thực hoặc không có quyền Recruiter (AC1)
+        API-->>UI: 403 Forbidden (Error: Tài khoản doanh nghiệp chưa được xác thực)
+        UI-->>R: Hiển thị lỗi, chặn không cho đăng bài tuyển dụng
+    else Trường hợp 2: Thiếu thông tin bắt buộc hoặc cấu hình sai bộ lọc
+        API-->>UI: 400 Bad Request (Error: Thiếu thông tin hoặc cấu hình sai)
+        UI-->>R: Giữ nguyên form, hiển thị lỗi đỏ tại các ô nhập liệu thiếu thông tin
+    else Trường hợp 3: Hợp lệ hoàn toàn -> Tiến hành lưu trữ cục bộ (AC3)
+        
+        %% --- GIAI ĐOẠN 3: LƯU TRỮ VÀ GHI VẾT KIỂM TOÁN ---
+        Note over API, DB: [Giai đoạn 3]: Lưu trữ dữ liệu và ghi nhật ký kiểm toán (AC3, AC4)
+        API->>+DB: Lưu thông tin bài đăng & Chi tiết cấu hình bộ lọc bằng cấp
+        DB-->>-API: Xác nhận lưu trữ thành công (Trả về JobID)
+        
+        API->>+DB: Ghi nhật ký hệ thống hành vi chung (ActionType = "POST_JOB", JobID)
+        DB-->>-API: Xác nhận ghi Log thành công
+        
+        API-->>UI: 201 Created (Payload: JobID, Status = 'Active')
+    end
+    
+    deactivate API
+    UI-->>R: Hiển thị Toast: "Đăng tin tuyển dụng thành công" & Làm sạch biểu mẫu (Clear Form)

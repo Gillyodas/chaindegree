@@ -1,0 +1,75 @@
+graph TD
+    %% --- ĐỊNH VỊ PHÂN LÀN DỌC SONG SONG (TỪ TRÁI SANG PHẢI) ---
+    
+    %% Cột 1: Ngoài cùng bên trái
+    subgraph Registrar_Lane [Sinh viên / Nhà tuyển dụng]
+        direction TB
+        Start([ ]) --> ClickReport[Nhấn nút 'Báo cáo sai sót/Gian lận']
+        ClickReport --> FillForm[Chọn Loại báo cáo & Nhập nội dung mô tả]
+        FillForm --> UploadFile[Tải lên file minh chứng bắt buộc]
+        UploadFile --> SubmitReport[Nhấn nút 'Gửi báo cáo']
+        
+        %% Nhận phản hồi tương tác từ hệ thống
+        ReceiveToast[/Hiển thị Toast: Gửi báo cáo thành công/] --> CloseForm[Đóng biểu mẫu báo cáo]
+        CloseForm --> EndSync([ ])
+        
+        ShowAuthError[Hiển thị lỗi: Không có quyền báo cáo] --> EndSync
+        ShowValidationError[Hiển thị lỗi: Thiếu thông tin / Minh chứng] --> FillForm
+    end
+
+    %% Cột 2: Ở giữa (Xử lý ứng dụng & Cơ sở dữ liệu tập trung)
+    subgraph System_Lane [Hệ thống - Web API & CSDL]
+        direction TB
+        SystemAnchor[ ] ---- CheckAuth{Kiểm tra Actor \n và Phân quyền? AC1}
+        style SystemAnchor fill:none,stroke:none,color:#fff;
+        
+        SubmitReport ----> CheckAuth
+        
+        %% Kiểm tra phân quyền báo cáo (AC1)
+        CheckAuth -->|Sinh viên báo cáo bằng người khác| ShowAuthError
+        CheckAuth -->|Hợp lệ| CheckInputs{Điền đủ thông tin \n & đính kèm file? AC2}
+        
+        %% Kiểm tra thông tin bắt buộc (AC2)
+        CheckInputs -->|Thiếu dữ liệu| ShowValidationError
+        
+        %% Lưu trữ đơn khiếu nại (AC3)
+        CheckInputs -->|Hợp lệ| SaveReport[(CSDL: Lưu đơn báo cáo \n Trạng thái: Pending_Review)]
+        
+        SaveReport --> TriggerNotify[Kích hoạt sự kiện \n gửi thông báo đa bên]
+        SaveReport --> WriteLog[Ghi nhật ký hành vi \n ActionType = 'SUBMIT_REPORT' AC4]
+        
+        TriggerNotify --> ReceiveToast
+    end
+
+    %% Cột 3: Ngoài cùng bên phải (Hệ thống thông báo & Tiến trình nền)
+    subgraph Background_Lane [Hệ thống thông báo & Phê duyệt]
+        direction TB
+        BackgroundAnchor[ ] ---- DispatchNotify[Xác định các đối tượng cần thông báo]
+        style BackgroundAnchor fill:none,stroke:none,color:#fff;
+        
+        TriggerNotify -.->|Trigger Event| DispatchNotify
+        
+        %% Cơ chế gửi thông báo đa bên (AC3)
+        DispatchNotify --> SendCSDT[Gửi thông báo đến \n Tài khoản Quản trị CSDT bị báo cáo]
+        DispatchNotify --> SendGov[Gửi thông báo đến \n Cơ quan Thẩm quyền Tối cao]
+        
+        SendCSDT --> EndAsync([ ])
+        SendGov --> EndAsync
+    end
+
+    %% --- ĐƯỜNG NEO ẨN (CRITICAL): ÉP THỨ TỰ TỪ TRÁI SANG PHẢI VÀ PHẲNG ĐỂ LÀN BẰNG NHAU ---
+    Start ~~~ SystemAnchor
+    SystemAnchor ~~~ BackgroundAnchor
+    
+    EndSync ~~~ WriteLog
+    WriteLog ~~~ EndAsync
+
+    %% --- ĐỊNH DẠNG STYLE TRỰC QUAN ---
+    classDef cleanStyle fill:#ffffff,stroke:#333333,stroke-width:1.5px,color:#000000;
+    class ClickReport,FillForm,UploadFile,SubmitReport,ReceiveToast,CloseForm,ShowAuthError,ShowValidationError cleanStyle;
+    class CheckAuth,CheckInputs,SaveReport,TriggerNotify,WriteLog cleanStyle;
+    class DispatchNotify,SendCSDT,SendGov cleanStyle;
+
+    style Start fill:#000,stroke:#000;
+    style EndSync fill:#000,stroke:#000;
+    style EndAsync fill:#000,stroke:#000;

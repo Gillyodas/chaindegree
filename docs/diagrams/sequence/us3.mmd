@@ -1,0 +1,60 @@
+sequenceDiagram
+    autonumber
+    actor V as Người tra cứu (Sinh viên / Nhà tuyển dụng)
+    participant UI as Verification Portal (UI)
+    participant API as Web API Server
+    participant DB as CSDL Truyền thống
+    participant BC as Mạng lưới Chuỗi (Blockchain)
+
+    %% --- GIAI ĐOẠN 1: TIẾP NHẬN MÃ TRA CỨU CÔNG KHAI ---
+    Note over V, UI: [Giai đoạn 1]: Thao tác công khai không yêu cầu đăng nhập (AC1)
+    alt Phương thức Quét mã QR
+        V->>UI: Quét mã QR trên văn bằng
+    else Phương thức Nhập thủ công
+        V->>UI: Nhập Mã định danh văn bằng (DegreeID)
+    end
+    
+    UI->>+API: GET /api/v1/verifications/{degreeId} (Không truyền Bearer Token)
+    activate API
+    
+    %% --- GIAI ĐOẠN 2: TRUY VẤN HYBRID VÀ ĐỐI CHIẾU KÉP ---
+    Note over API, DB: [Giai đoạn 2]: Lấy dữ liệu nền tảng tập trung (AC2)
+    API->>+DB: Query: Lấy thông tin chi tiết, Salt, DataHash theo DegreeID
+    DB-->>-API: Trả về dữ liệu (PlainData, Salt, DataHash_Local, Status)
+    
+    alt Trường hợp 1: Không tìm thấy văn bằng trong hệ thống (AC3)
+        API-->>UI: 404 Not Found (Error: Văn bằng không tồn tại)
+        UI-->>V: Hiển thị giao diện: "Không tìm thấy văn bằng"
+    else Trường hợp 2: Văn bằng tồn tại -> Tiến hành kiểm tra chéo (AC2)
+        
+        %% Ghi nhật ký song song phi chặn (AC4)
+        API->>+DB: Ghi nhật ký hệ thống (ActionType = "VERIFY_DEGREE", DegreeID)
+        DB-->>-API: Xác nhận ghi Log thành công
+        
+        Note over API, BC: Gọi mạng lưới lưu trữ bất biến lấy chuỗi Hash gốc (AC2)
+        API->>+BC: Truy vấn Smart Contract: getLatestDegreeHash(degreeId)
+        BC-->>-API: Trả về chuỗi băm được lưu ở Block mới nhất (DataHash_Blockchain)
+        
+        Note over API: Thực hiện thuật toán đối chiếu kép mật mã (AC2)
+        API->>API: Tính toán lại mã băm: Hash_Check = Hash(PlainData + Salt)
+        
+        %% --- GIAI ĐOẠN 3: PHÂN ĐỊNH KẾT QUẢ XÁC THỰC ---
+        Note over API, UI: [Giai đoạn 3]: So khớp và phân định kịch bản trả về (AC3)
+        alt Kịch bản A: Mã băm không khớp (Dữ liệu CSDL đã bị sửa đổi trái phép - AC3)
+            API-->>UI: 422 Unprocessable Entity (Status: 'Tampered', Payload: PlainData)
+            UI-->>V: Hiển thị CẢNH BÁO NGUY HIỂM: Dữ liệu sai lệch 🟠 (Khung viền Cam nhấp nháy)
+            
+        else Kịch bản B: Mã băm trùng khớp hoàn toàn (Dữ liệu toàn vẹn - AC3)
+            
+            alt Trạng thái văn bằng trong CSDL là 'Confirmed'
+                API-->>+UI: 200 OK (Status: 'Valid', Payload: PlainData)
+                UI-->>V: Hiển thị kết quả: Hợp lệ 🟢 (Khung viền Xanh lá cây)
+            else Trạng thái văn bằng trong CSDL là 'Revoked'
+                API-->>UI: 200 OK (Status: 'Revoked', Payload: PlainData)
+                UI-->>V: Hiển thị cảnh báo: Đã bị CSDT thu hồi 🔴 (Khung viền Đỏ)
+            end
+            deactivate UI
+            
+        end
+    end
+    deactivate API

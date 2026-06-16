@@ -1,0 +1,105 @@
+graph TD
+    %% --- ĐỊNH VỊ PHÂN LÀN DỌC SONG SONG (TỪ TRÁI SANG PHẢI) ---
+    
+    %% Cột 1: Ngoài cùng bên trái
+    subgraph Registrar_Lane [Registrar - Người dùng CSDT]
+        direction TB
+        Start([ ]) --> SelectDegree[Chọn văn bằng mục tiêu]
+        SelectDegree --> InputReason[Chọn/Nhập lý do & thông tin mới nếu cần]
+        InputReason --> ClickAction{Chọn hành động?}
+        
+        ClickAction -->|Nút: Thu hồi bằng| SubmitReq[Xác nhận yêu cầu]
+        ClickAction -->|Nút: Cập nhật| SubmitReq
+        
+        %% Nhận phản hồi tương tác từ hệ thống (UI thay đổi theo AC2/AC3)
+        ReceiveToastFast[/Hiển thị Toast: Thành công & Miễn trừ uy tín/] --> SetUIRed[UI chuyển ngay sang Đỏ 🔴 Revoked]
+        SetUIRed --> EndSync([ ])
+        
+        ReceiveToastNormal[/Hiển thị Toast: Đang đồng bộ ngầm/] --> SetUIYellow[UI chuyển sang Vàng 🟡 Pending...]
+        SetUIYellow --> EndSync
+    end
+
+    %% Cột 2: Ở giữa
+    subgraph System_Lane [Hệ thống - Web API & CSDL]
+        direction TB
+        SystemAnchor[ ] ---- CheckPre{Kiểm tra quyền Registrar \n & Lý do hợp lệ?}
+        style SystemAnchor fill:none,stroke:none,color:#fff;
+        
+        SubmitReq ----> CheckPre
+        
+        CheckPre -->|Không hợp lệ| RejectAction[Từ chối thao tác / Báo lỗi]
+        RejectAction --> InputReason
+        
+        %% Kiểm tra trạng thái văn bằng (AC2 & AC3)
+        CheckPre -->|Hợp lệ| CheckState{Trạng thái hiện tại \n của văn bằng?}
+        
+        %% --- Nhánh 1: Xử lý nhanh (AC3) ---
+        CheckState -->|Pending_Confirmation| FastTrack{Loại hành động?}
+        
+        FastTrack -->|Thu hồi| DBFastRevoke[(CSDL: Chuyển thẳng sang Revoked \n Hủy tác vụ Queue cũ)]
+        FastTrack -->|Cập nhật| DBFastUpdate[(CSDL: Cập nhật thông tin mới \n Tính lại DataHash mới)]
+        
+        DBFastRevoke --> WriteLogFast[Ghi nhật ký: ActionType \n Miễn trừ uy tín AC4]
+        DBFastUpdate --> WriteLogFast
+        WriteLogFast --> ReceiveToastFast
+        
+        %% --- Nhánh 2: Xử lý đồng bộ ngầm (AC2) ---
+        CheckState -->|Confirmed| NormalTrack{Loại hành động?}
+        
+        NormalTrack -->|Thu hồi| DBNormalRevoke[(CSDL: Chuyển sang Pending_Revocation)]
+        NormalTrack -->|Cập nhật| DBNormalUpdate[(CSDL: Chuyển sang Pending_Update)]
+        
+        DBNormalRevoke --> AuditReputation{Phân tích lý do: \n Lỗi do ai? AC4}
+        
+        AuditReputation -->|Lỗi do CSDT| FlagPenalty[Kích hoạt luồng phạt \n Điểm uy tín US-5]
+        AuditReputation -->|Lỗi do Sinh viên| FlagKeep[Giữ nguyên \n Điểm uy tín]
+        
+        DBNormalUpdate --> FlagKeep
+        
+        FlagPenalty --> PushQueue[Đẩy lệnh thay đổi \n vào Hàng đợi ngầm]
+        FlagKeep --> PushQueue
+        
+        PushQueue --> WriteLogNormal[Ghi nhật ký hành vi chung AC5]
+        WriteLogNormal --> ReceiveToastNormal
+    end
+
+    %% Cột 3: Ngoài cùng bên phải
+    subgraph Background_Lane [Tiến trình ngầm - Background Queue]
+        direction TB
+        BackgroundAnchor[ ] ---- FetchTask[Nhận tác vụ thay đổi trạng thái]
+        style BackgroundAnchor fill:none,stroke:none,color:#fff;
+        
+        PushQueue -.->|Trigger Async| FetchTask
+        
+        FetchTask --> TxNetwork[Gửi giao dịch trạng thái mới \n lên mạng lưới bất biến]
+        TxNetwork --> CheckTx{Mạng lưới \n xác nhận thành công?}
+        
+        %% Trạng thái cuối cùng (AC2)
+        CheckTx -->|Thành công| DBFinal{Loại lệnh?}
+        DBFinal -->|Thu hồi| DBFinalRevoke[(CSDL chính thức: \n Chuyển sang Revoked)]
+        DBFinal -->|Cập nhật| DBFinalUpdate[(CSDL chính thức: \n Quay lại Confirmed)]
+        
+        CheckTx -->|Thất bại| DBFinalErr[(CSDL: Trả về \n trạng thái cũ/Lỗi)]
+        
+        DBFinalRevoke --> UpdateUIFinal[UI cập nhật trạng thái cuối]
+        DBFinalUpdate --> UpdateUIFinal
+        DBFinalErr --> UpdateUIFinal
+        UpdateUIFinal --> EndAsync([ ])
+    end
+
+    %% --- ĐƯỜNG NEO ẨN (CRITICAL): ÉP THỨ TỰ TỪ TRÁI SANG PHẢI VÀ PHẲNG ĐỂ LÀN BẰNG NHAU ---
+    Start ~~~ SystemAnchor
+    SystemAnchor ~~~ BackgroundAnchor
+    
+    EndSync ~~~ WriteLogNormal
+    WriteLogNormal ~~~ EndAsync
+
+    %% --- ĐỊNH DẠNG STYLE TRỰC QUAN ---
+    classDef cleanStyle fill:#ffffff,stroke:#333333,stroke-width:1.5px,color:#000000;
+    class SelectDegree,InputReason,ClickAction,SubmitReq,ReceiveToastFast,SetUIRed,ReceiveToastNormal,SetUIYellow cleanStyle;
+    class CheckPre,RejectAction,CheckState,FastTrack,DBFastRevoke,DBFastUpdate,WriteLogFast,NormalTrack,DBNormalRevoke,DBNormalUpdate,AuditReputation,FlagPenalty,FlagKeep,PushQueue,WriteLogNormal cleanStyle;
+    class FetchTask,TxNetwork,CheckNetwork,CheckTx,DBFinal,DBFinalRevoke,DBFinalUpdate,DBFinalErr,UpdateUIFinal cleanStyle;
+
+    style Start fill:#000,stroke:#000;
+    style EndSync fill:#000,stroke:#000;
+    style EndAsync fill:#000,stroke:#000;

@@ -1,0 +1,56 @@
+graph TD
+    %% --- ĐỊNH VỊ PHÂN LÀN DỌC SONG SONG (TỰ NHIÊN THEO NGHIỆP VỤ) ---
+    
+    %% Làn 1: Nhà tuyển dụng - Đối tượng tương tác chính
+    subgraph Recruiter_Lane [Nhà tuyển dụng - Recruiter]
+        direction TB
+        Start([ ]) --> ClickPostJob[Nhấn nút 'Đăng tin tuyển dụng']
+        ClickPostJob --> FillBasicInfo[Nhập thông tin cơ bản: Tiêu đề, Mức lương...]
+        
+        %% Thao tác cấu hình bộ lọc bằng cấp (AC2)
+        FillBasicInfo --> ClickAddFilter[Nhấn nút '+ Thêm điều kiện bằng']
+        ClickAddFilter --> SelectFilters[Chọn: Loại bằng, Chuyên ngành, Xếp loại tối thiểu]
+        SelectFilters --> SubmitPost[Nhấn nút 'Xác nhận đăng bài']
+        
+        %% Nhận phản hồi từ Hệ thống
+        ReceiveToast[/Hiển thị Toast: Đăng tin tuyển dụng thành công/] --> RefreshDashboard[Cập nhật danh sách bài tuyển dụng]
+        RefreshDashboard --> EndSync([ ])
+        
+        ShowAuthError[Hiển thị lỗi: Tài khoản doanh nghiệp chưa xác thực] --> EndSync
+        ShowValidationError[Hiển thị lỗi: Thiếu thông tin bắt buộc] --> FillBasicInfo
+    end
+
+    %% Làn 2: Hệ thống xử lý trung tâm & Cơ sở dữ liệu (AC3)
+    subgraph System_Lane [Hệ thống - Web API & CSDL]
+        direction TB
+        SystemAnchor[ ] ---- CheckAuth{Kiểm tra quyền Recruiter \n & Xác thực doanh nghiệp? AC1}
+        style SystemAnchor fill:none,stroke:none,color:#fff;
+        
+        SubmitPost ----> CheckAuth
+        
+        %% Kiểm tra điều kiện tiên quyết (AC1)
+        CheckAuth -->|Chưa xác thực| ShowAuthError
+        CheckAuth -->|Hợp lệ| CheckInputs{Điền đủ thông tin \n & Cấu hình bộ lọc? AC2}
+        
+        %% Kiểm tra dữ liệu đầu vào
+        CheckInputs -->|Thiếu thông tin| ShowValidationError
+        
+        %% Lưu trữ cấu hình bài đăng hoàn toàn trong CSDL (AC3)
+        CheckInputs -->|Hợp lệ| SaveJobDB[(CSDL: Lưu thông tin bài đăng \n & Cấu hình bộ lọc bằng cấp)]
+        
+        %% Ghi nhật ký hành vi & Trả kết quả lên UI (AC4)
+        SaveJobDB --> WriteLog[Ghi nhật ký hành vi: \n ActionType = 'POST_JOB' AC4]
+        WriteLog --> ReceiveToast
+    end
+
+    %% --- ĐƯỜNG NEO ẨN (CRITICAL): ÉP THỨ TỰ CÁC LÀN PHẲNG ĐỀU NHAU ---
+    Start ~~~ SystemAnchor
+    EndSync ~~~ WriteLog
+
+    %% --- ĐỊNH DẠNG STYLE TRỰC QUAN ---
+    classDef cleanStyle fill:#ffffff,stroke:#333333,stroke-width:1.5px,color:#000000;
+    class ClickPostJob,FillBasicInfo,ClickAddFilter,SelectFilters,SubmitPost,ReceiveToast,RefreshDashboard,ShowAuthError,ShowValidationError cleanStyle;
+    class CheckAuth,CheckInputs,SaveJobDB,WriteLog cleanStyle;
+
+    style Start fill:#000,stroke:#000;
+    style EndSync fill:#000,stroke:#000;

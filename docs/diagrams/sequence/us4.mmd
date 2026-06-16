@@ -1,0 +1,75 @@
+sequenceDiagram
+    autonumber
+    actor U as Người báo cáo (Sinh viên / Nhà tuyển dụng)
+    participant UI as Frontend Client
+    participant API as Web API Server
+    participant DB as CSDL Truyền thống
+    participant EV as Event Bus (MediatR / RabbitMQ)
+    participant NS as Notification Service (Email/In-app)
+
+    %% --- GIAI ĐOẠN 1: THAO TÁC TRÊN GIAO DIỆN VÀ GỬI YÊU CẦU ---
+    Note over U, UI: [Giai đoạn 1]: Người dùng điền biểu mẫu và đính kèm minh chứng
+    U->>UI: Nhấn nút [Báo cáo sai sót/Gian lận]
+    activate UI
+    UI->>UI: Hiển thị Form (Loại báo cáo, Nội dung, Vùng đính kèm file)
+    U->>UI: Điền thông tin + Tải file minh chứng lên + Nhấn [Gửi báo cáo]
+    
+    UI->>+API: POST /api/v1/reports (Multipart FormData: DegreeID, Type, Description, EvidenceFile)
+    activate API
+    
+    %% --- GIAI ĐOẠN 2: KIỂM TRA PHÂN QUYỀN VÀ TÍNH HỢP LỆ ---
+    Note over API, DB: [Giai đoạn 2]: Xác thực đặc quyền Actor & Toàn vẹn dữ liệu
+    API->>+DB: Query: Lấy thông tin tài khoản Actor và thông tin sở hữu văn bằng bị báo cáo
+    DB-->>-API: Trả về thông tin (Actor_Role, Student_Identifier, Degree_Owner)
+    
+    Note over API: Kiểm tra phân quyền báo cáo (AC1)
+    alt Trường hợp Sinh viên báo cáo văn bằng của người khác
+        API-->>UI: 403 Forbidden (Error: Sinh viên chỉ được báo cáo văn bằng của chính mình)
+        UI-->>U: Hiển thị thông báo lỗi: "Không có quyền báo cáo"
+    else Trường hợp Hợp lệ (Sinh viên báo cáo bằng của mình HOẶC Nhà tuyển dụng báo cáo bất kỳ bằng nào)
+        
+        Note over API: Kiểm tra thông tin bắt buộc & File minh chứng (AC2)
+        alt Thiếu thông tin bắt buộc hoặc không đính kèm file minh chứng
+            API-->>UI: 400 Bad Request (Error: Thiếu thông tin hoặc file minh chứng)
+            UI-->>U: Giữ nguyên form, hiển thị cảnh báo lỗi màu đỏ tại ô nhập liệu
+        else Dữ liệu đầu vào hợp lệ
+            
+            %% --- GIAI ĐOẠN 3: LƯU TRỮ VÀ KÍCH HOẠT SỰ KIỆN ĐA BÊN ---
+            Note over API, DB: [Giai đoạn 3]: Lưu đơn khiếu nại và ghi log kiểm toán (AC3, AC4)
+            API->>API: Lưu trữ vật lý file minh chứng vào Storage (S3 / Local Directory) và sinh đường dẫn EvidenceUrl
+            
+            API->>+DB: Lưu đơn báo cáo (Status = 'Pending_Review', DegreeID, Type, Description, EvidenceUrl)
+            DB-->>-API: Xác nhận lưu trữ thành công (Trả về ReportID)
+            
+            API->>+DB: Ghi nhật ký hệ thống (ActionType = "SUBMIT_REPORT", DegreeID, ReportID)
+            DB-->>-API: Xác nhận ghi Log thành công
+            
+            Note over API, EV: Kích hoạt sự kiện thông báo đa bên (AC3)
+            API->>+EV: Publish Event: ReportSubmittedEvent({ReportID, DegreeID, CSDT_ID})
+            EV-->>-API: Xác nhận nhận sự kiện thành công
+            
+            API-->>UI: 200 OK (Payload: Status = 'Pending_Review')
+            deactivate API
+            UI-->>U: Hiển thị Toast Notification: "Gửi báo cáo thành công" & Đóng biểu mẫu
+            deactivate UI
+        end
+    end
+
+    %% --- GIAI ĐOẠN 4: TIẾN TRÌNH NỀN PHÁT THÔNG BÁO BẤT ĐỒNG BỘ ---
+    Note over EV, NS: [Giai đoạn 4]: Xử lý gửi thông báo ngầm đến các bên thẩm quyền (AC3)
+    activate EV
+    EV->>+NS: Consumer tiếp nhận ReportSubmittedEvent
+    activate NS
+    
+    NS->>+DB: Query: Lấy danh sách tài khoản Quản trị của CSDT bị báo cáo
+    DB-->>-NS: Danh sách Email/User_ID Quản trị CSDT
+    
+    par Thông báo đến Cơ sở đào tạo
+        NS->>NS: Gửi thông báo (Email / In-app) yêu cầu xét duyệt đơn khiếu nại đến CSDT
+    and Thông báo đến Cơ quan tối cao
+        NS->>NS: Gửi thông báo cảnh báo giám sát đến Cơ quan Thẩm quyền Tối cao (Bộ GD&ĐT)
+    end
+    
+    NS-->>-EV: Xác nhận hoàn tất xử lý sự kiện (ACK)
+    deactivate NS
+    deactivate EV

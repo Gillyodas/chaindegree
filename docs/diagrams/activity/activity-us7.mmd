@@ -1,0 +1,83 @@
+graph TD
+    %% --- ĐỊNH VỊ PHÂN LÀN DỌC SONG SONG (THEO NGHIỆP VỤ) ---
+    
+    %% Làn 1: Ứng viên (Sinh viên) tương tác UI
+    subgraph Student_Lane [Sinh viên - Candidate]
+        direction TB
+        Start([ ]) --> ActionChoice{Hành động của \n Sinh viên?}
+        
+        %% --- LUỒNG TÌM KIẾM VIỆC LÀM (AC2) ---
+        ActionChoice -->|Tìm kiếm việc làm| SearchJob[Truy cập trang tìm kiếm việc làm]
+        SearchJob --> SendSearch[Gửi yêu cầu tìm kiếm việc làm]
+        
+        %% Phản hồi luồng tìm kiếm
+        ReceiveList[/Hiển thị danh sách việc làm/] --> ShowTopFeatured[Các bài đăng của Doanh nghiệp liên kết \n với CSDT uy tín cao xếp ở đầu Top Featured]
+        ShowTopFeatured --> EndSync([ ])
+        
+        %% --- LUỒNG ỨNG TUYỂN LINH HOẠT (AC1) ---
+        ActionChoice -->|Ứng tuyển| ClickApply[Nhấn nút 'Ứng tuyển nhanh' tại bài đăng]
+        ClickApply --> SelectDegree[Chọn mã văn bằng dùng để đối chiếu]
+        SelectDegree --> SubmitApply[Xác nhận nộp hồ sơ]
+        
+        %% Giao diện tương tác dựa trên kết quả kiểm tra (AC1)
+        ShowWarningPopup{Popup ⚠️: Chưa đạt chuẩn. \n Bạn vẫn muốn nộp?}
+        ShowWarningPopup -->|Bấm: Vẫn nộp| ConfirmForceSubmit[Gửi yêu cầu nộp cưỡng bức]
+        ShowWarningPopup -->|Bấm: Hủy| ClosePopup[Đóng Popup và dừng luồng]
+        
+        ClosePopup --> EndSync
+        
+        %% Kết quả phản hồi cuối cùng ra giao diện từ Hệ thống
+        ReceiveSuccessToast[/Hiển thị Toast: Ứng tuyển thành công/] --> EndSync
+        ShowFraudError[Hiển thị lỗi: Văn bằng đã bị thu hồi hoặc đang xử lý] --> EndSync
+    end
+
+    %% Làn 2: Hệ thống xử lý trung tâm & Cơ sở dữ liệu (AC1, AC2, AC3)
+    subgraph System_Lane [Hệ thống - Web API & CSDL]
+        direction TB
+        SystemAnchor[ ] ---- ProcessRouting{Xử lý yêu cầu từ UI?}
+        style SystemAnchor fill:none,stroke:none,color:#fff;
+        
+        SendSearch ----> ProcessRouting
+        SubmitApply ----> ProcessRouting
+        ConfirmForceSubmit ----> ProcessRouting
+        
+        %% --- Logic luồng Tìm kiếm (AC2) ---
+        ProcessRouting -->|Xử lý tìm kiếm| FetchJobs[(CSDL: Truy vấn bài đăng & \n Điểm uy tín Reputation Score của CSDT liên kết)]
+        FetchJobs --> RankingAlgo[Thuật toán Ranking: Sắp xếp bài đăng \n theo trọng số Điểm uy tín của trường liên kết]
+        RankingAlgo --> ReceiveList
+        
+        %% --- Logic luồng Ứng tuyển - Kiểm tra điều kiện (AC1) ---
+        ProcessRouting -->|Xử lý ứng tuyển sơ bộ| CheckFraud{Kiểm tra trạng thái \n văn bằng đính kèm?}
+        
+        %% Trường hợp Gian lận (AC1)
+        CheckFraud -->|Revoked / Pending_Revocation| ShowFraudError
+        
+        %% Trường hợp hợp lệ về mặt pháp lý -> Tiến hành đối chiếu bộ lọc (US-6)
+        CheckFraud -->|Confirmed / Pending_Confirmation| MatchFilter{Đối chiếu dữ liệu văn bằng \n với bộ lọc yêu cầu từ US-6?}
+        
+        %% Nhánh 1: Khớp hoàn toàn
+        MatchFilter -->|Khớp hoàn toàn| SaveHighlyQualified[(CSDL: Lưu đơn ứng tuyển \n Nhãn trạng thái: Highly_Qualified)]
+        SaveHighlyQualified --> WriteLogApply[Ghi nhật ký hành vi: \n ActionType = 'APPLY_JOB']
+        
+        %% Nhánh 2: Không khớp hoặc thiếu bằng (Kích hoạt Popup cảnh báo ở UI)
+        MatchFilter -->|Không khớp / Thiếu bằng| ShowWarningPopup
+        
+        %% Nhánh 3: Sinh viên cố tình nộp cưỡng bức từ Popup cảnh báo (AC1)
+        ProcessRouting -->|Xử lý nộp cưỡng bức| SaveUnderQualified[(CSDL: Lưu đơn ứng tuyển \n Nhãn trạng thái: Under_Qualified)]
+        SaveUnderQualified --> WriteLogApply
+        
+        %% Trả kết quả sau khi lưu trữ thành công & ghi nhận nhật ký (AC3)
+        WriteLogApply --> ReceiveSuccessToast
+    end
+
+    %% --- ĐƯỜNG NEO ẨN (CRITICAL): ÉP THỨ TỰ CÁC LÀN PHẲNG ĐỀU NHAU ---
+    Start ~~~ SystemAnchor
+    EndSync ~~~ FetchJobs
+
+    %% --- ĐỊNH DẠNG STYLE TRỰC QUAN ---
+    classDef cleanStyle fill:#ffffff,stroke:#333333,stroke-width:1.5px,color:#000000;
+    class ActionChoice,SearchJob,SendSearch,ReceiveList,ShowTopFeatured,ClickApply,SelectDegree,SubmitApply,ShowWarningPopup,ConfirmForceSubmit,ClosePopup,ReceiveSuccessToast,ShowFraudError cleanStyle;
+    class ProcessRouting,FetchJobs,RankingAlgo,CheckFraud,MatchFilter,SaveHighlyQualified,SaveUnderQualified,WriteLogApply cleanStyle;
+
+    style Start fill:#000,stroke:#000;
+    style EndSync fill:#000,stroke:#000;
