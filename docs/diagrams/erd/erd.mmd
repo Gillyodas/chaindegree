@@ -1,0 +1,133 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    UNIVERSITIES ||--o{ DEGREES : "issues"
+    UNIVERSITIES ||--o{ JOBS : "partners_with"
+    UNIVERSITIES ||--o{ REPUTATION_HISTORIES : "tracks_changes"
+    
+    STUDENTS ||--o{ DEGREES : "owns"
+    STUDENTS ||--o{ REPORTS : "submits"
+    STUDENTS ||--o{ APPLICATIONS : "applies"
+    
+    RECRUITERS ||--o{ JOBS : "creates"
+    RECRUITERS ||--o{ REPORTS : "submits"
+    
+    DEGREES ||--o{ REPORTS : "is_reported_by"
+    DEGREES ||--o{ APPLICATIONS : "is_submitted_with"
+    
+    JOBS ||--o{ APPLICATIONS : "receives"
+    JOBS ||--o{ JOB_DEGREE_FILTERS : "requires"
+
+    UNIVERSITIES {
+        uuid id PK
+        string code UK
+        string name
+        string email UK
+        int current_reputation_score "Mặc định: 100"
+        datetime created_at
+        datetime updated_at
+    }
+
+    STUDENTS {
+        uuid id PK
+        string student_code UK
+        string full_name
+        string email UK
+        datetime created_at
+        datetime updated_at
+    }
+
+    RECRUITERS {
+        uuid id PK
+        string company_name
+        string contact_email UK
+        boolean is_verified "Trạng thái xác thực DN"
+        datetime created_at
+        datetime updated_at
+    }
+
+    DEGREES {
+        uuid id PK
+        string degree_code UK
+        uuid university_id FK
+        uuid student_id FK
+        string major
+        string classification
+        string plain_data_json
+        string salt
+        string data_hash_local
+        string status_enum "Pending_Confirmation | Confirmed | Pending_Revocation | Revoked | Pending_Update | Confirmation_Error"
+        string tx_hash_blockchain
+        datetime issued_at
+        datetime updated_at
+    }
+
+    REPUTATION_HISTORIES {
+        uuid id PK
+        uuid university_id FK
+        int old_score
+        int new_score
+        string change_reason
+        string status_enum "Pending_Freeze | Frozen | Freeze_Error"
+        string tx_hash_blockchain
+        datetime created_at
+    }
+
+    REPORTS {
+        uuid id PK
+        uuid degree_id FK
+        string reporter_role_enum "Student | Recruiter"
+        uuid reporter_id "Ghi nhận tường minh ID của đối tượng báo cáo"
+        string report_type_enum "Administrative_Error | Fraudulent_Data"
+        string description
+        string evidence_url
+        string status_enum "Pending_Review | Approved | Rejected"
+        datetime created_at
+        datetime reviewed_at
+    }
+
+    JOBS {
+        uuid id PK
+        uuid recruiter_id FK
+        string title
+        bigint salary_min
+        bigint salary_max
+        string description
+        string status_enum "Active | Inactive"
+        datetime created_at
+        datetime updated_at
+    }
+
+    JOB_DEGREE_FILTERS {
+        uuid id PK
+        uuid job_id FK
+        string degree_type_enum "Cu_Nhan | Ky_Su | Thac_Si | ..."
+        string required_major
+        string min_classification
+    }
+
+    APPLICATIONS {
+        uuid id PK
+        uuid job_id FK
+        uuid student_id FK
+        uuid degree_id FK
+        string rank_status_enum "Highly_Qualified | Under_Qualified"
+        string process_status_enum "Submitted | Reviewing | Accepted | Rejected"
+        datetime created_at
+        datetime updated_at
+    }
+
+    BEHAVIOR_LOGS {
+        uuid id PK
+        string action_type_enum "CREATE_DEGREE | ALTER_DEGREE | REPUTATION_CHANGED | POST_JOB | APPLY_JOB | VERIFY_DEGREE"
+        string actor_role "Admin | Registrar | Student | Recruiter | System"
+        uuid actor_id
+        string target_table
+        uuid target_id
+        string old_values_json
+        string new_values_json
+        string ip_address
+        datetime created_at
+    }
