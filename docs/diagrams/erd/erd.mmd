@@ -3,9 +3,9 @@ config:
   layout: elk
 ---
 erDiagram
+    %% --- CORE INTEGRATIONS & RELATIONSHIPS ---
     UNIVERSITIES ||--o{ DEGREES : "issues"
     UNIVERSITIES ||--o{ JOBS : "partners_with"
-    UNIVERSITIES ||--o{ REPUTATION_HISTORIES : "tracks_changes"
     
     STUDENTS ||--o{ DEGREES : "owns"
     STUDENTS ||--o{ REPORTS : "submits"
@@ -20,12 +20,14 @@ erDiagram
     JOBS ||--o{ APPLICATIONS : "receives"
     JOBS ||--o{ JOB_DEGREE_FILTERS : "requires"
 
+    %% --- PLUGGED MODULE RELATIONSHIPS (EVENT-DRIVEN BOUNDED CONTEXT) ---
+    UNIVERSITIES ||--o{ REPUTATION_HISTORIES : "tracks_via_reputation_module"
+
     UNIVERSITIES {
         uuid id PK
         string code UK
         string name
         string email UK
-        int current_reputation_score "Mặc định: 100"
         datetime created_at
         datetime updated_at
     }
@@ -55,7 +57,7 @@ erDiagram
         uuid student_id FK
         string major
         string classification
-        string plain_data_json
+        string plain_data_json "Snapshot dữ liệu thô phục vụ băm đối chiếu"
         string salt
         string data_hash_local
         string status_enum "Pending_Confirmation | Confirmed | Pending_Revocation | Revoked | Pending_Update | Confirmation_Error"
@@ -64,22 +66,11 @@ erDiagram
         datetime updated_at
     }
 
-    REPUTATION_HISTORIES {
-        uuid id PK
-        uuid university_id FK
-        int old_score
-        int new_score
-        string change_reason
-        string status_enum "Pending_Freeze | Frozen | Freeze_Error"
-        string tx_hash_blockchain
-        datetime created_at
-    }
-
     REPORTS {
         uuid id PK
         uuid degree_id FK
         string reporter_role_enum "Student | Recruiter"
-        uuid reporter_id "Ghi nhận tường minh ID của đối tượng báo cáo"
+        uuid reporter_id "ID của đối tượng báo cáo"
         string report_type_enum "Administrative_Error | Fraudulent_Data"
         string description
         string evidence_url
@@ -122,7 +113,7 @@ erDiagram
     BEHAVIOR_LOGS {
         uuid id PK
         string action_type_enum "CREATE_DEGREE | ALTER_DEGREE | REPUTATION_CHANGED | POST_JOB | APPLY_JOB | VERIFY_DEGREE"
-        string actor_role "Admin | Registrar | Student | Recruiter | System"
+        string actor_role_enum "Admin | Registrar | Student | Recruiter | System"
         uuid actor_id
         string target_table
         uuid target_id
@@ -130,4 +121,16 @@ erDiagram
         string new_values_json
         string ip_address
         datetime created_at
+    }
+
+    %% --- REPUTATION CONTEXT (PLUG-AND-PLAY MODULE VIA EVENTS) ---
+    REPUTATION_HISTORIES {
+        uuid id PK
+        uuid university_id FK
+        int old_score
+        int new_score
+        string change_reason "Được trích xuất từ Event Payload"
+        string status_enum "Pending_Freeze | Frozen | Freeze_Error"
+        string tx_hash_blockchain
+        datetime created_at "Chỉ Insert ngầm khi nhận được Event"
     }

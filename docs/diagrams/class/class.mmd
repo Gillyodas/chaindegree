@@ -1,0 +1,188 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+    %% --- CONFIGURATION & LAYOUT DIRECTION ---
+    direction TD
+
+    %% ==========================================================
+    %% 1. CORE DOMAIN CONTEXT (MODULE QUẢN LÝ BẰNG CẤP & TUYỂN DỤNG)
+    %% ==========================================================
+
+    class CryptoSnapshot {
+        <<Value Object>>
+        +String plainDataJson
+        +String salt
+        +String dataHashLocal
+        +VerifyLocal(calculatedHash: String) bool
+    }
+
+    class University {
+        <<Aggregate Root>>
+        +Guid Id
+        +String Code
+        +String Name
+        +String Email
+        +DateTime CreatedAt
+        +DateTime UpdatedAt
+    }
+
+    class Student {
+        <<Aggregate Root>>
+        +Guid Id
+        +String StudentCode
+        +String FullName
+        +String Email
+        +DateTime CreatedAt
+        +DateTime UpdatedAt
+    }
+
+    class Degree {
+        <<Aggregate Root>>
+        +Guid Id
+        +String DegreeCode
+        +Guid UniversityId
+        +Guid StudentId
+        +String Major
+        +String Classification
+        +CryptoSnapshot CryptoData
+        +StatusEnum Status
+        +String TxHashBlockchain
+        +DateTime IssuedAt
+        +DateTime UpdatedAt
+        +ConfirmBlockchainSync(txHash: String) void
+        +InitiateRevocation() void
+        +Revoke() void
+    }
+
+    class Recruiter {
+        <<Aggregate Root>>
+        +Guid Id
+        +String CompanyName
+        +String ContactEmail
+        +bool IsVerified
+        +DateTime CreatedAt
+        +DateTime UpdatedAt
+        +VerifyBusiness() void
+    }
+
+    class Job {
+        <<Aggregate Root>>
+        +Guid Id
+        +Guid RecruiterId
+        +String Title
+        +long SalaryMin
+        +long SalaryMax
+        +String Description
+        +StatusEnum Status
+        +DateTime CreatedAt
+        +DateTime UpdatedAt
+        +List~JobDegreeFilter~ DegreeFilters
+        +AddFilter(degreeType: String, major: String, minClassification: String) void
+        +EvaluateApplication(studentDegree: Degree) RankStatusEnum
+    }
+
+    class JobDegreeFilter {
+        <<Entity>>
+        +Guid Id
+        +Guid JobId
+        +DegreeTypeEnum DegreeType
+        +String RequiredMajor
+        +String MinClassification
+        +IsSatisfiedBy(degree: Degree) bool
+    }
+
+    class Application {
+        <<Aggregate Root>>
+        +Guid Id
+        +Guid JobId
+        +Guid StudentId
+        +Guid DegreeId
+        +RankStatusEnum RankStatus
+        +ProcessStatusEnum ProcessStatus
+        +DateTime CreatedAt
+        +DateTime UpdatedAt
+        +SubmitForcefully() void
+        +UpdateProcessStatus(newStatus: ProcessStatusEnum) void
+    }
+
+    class Report {
+        <<Aggregate Root>>
+        +Guid Id
+        +Guid DegreeId
+        +ReporterRoleEnum ReporterRole
+        +Guid ReporterId
+        +ReportTypeEnum ReportType
+        +String Description
+        +String EvidenceUrl
+        +StatusEnum Status
+        +DateTime CreatedAt
+        +DateTime ReviewedAt
+        +Approve() void
+        +Reject() void
+    }
+
+    class BehaviorLog {
+        <<Infrastructure Log>>
+        +Guid Id
+        +ActionTypeEnum ActionType
+        +ActorRoleEnum ActorRole
+        +Guid ActorId
+        +String TargetTable
+        +Guid TargetId
+        +String OldValuesJson
+        +String NewValuesJson
+        +String IpAddress
+        +DateTime CreatedAt
+    }
+
+    %% --- EVENTS (CẦU NỐI GIỮA CÁC MODULE) ---
+    class FraudulentDataDetectedEvent {
+        <<Domain Event>>
+        +Guid UniversityId
+        +Guid ReportId
+        +String ViolationDetails
+        +DateTime OccurredOn
+    }
+
+    %% ==========================================================
+    %% 2. PLUGGED REPUTATION CONTEXT (MODULE ĐỘC LẬP THEO DÕI UY TÍN)
+    %% ==========================================================
+    
+    class ReputationHistory {
+        <<Aggregate Root>>
+        +Guid Id
+        +Guid UniversityId
+        +int OldScore
+        +int NewScore
+        +String ChangeReason
+        +StatusEnum Status
+        +String TxHashBlockchain
+        +DateTime CreatedAt
+        +FreezeOnChain(txHash: String) void
+        +MarkAsFailed() void
+    }
+
+    class FraudulentDataEventHandler {
+        <<Integration Event Handler>>
+        +Handle(event: FraudulentDataDetectedEvent) Task
+    }
+
+    %% --- CORE DOMAIN RELATIONSHIPS ---
+    University "1" --o "*" Degree : "issues"
+    Student "1" --o "*" Degree : "owns"
+    Recruiter "1" --* "*" Job : "manages"
+    Job "1" --* "*" JobDegreeFilter : "defines"
+    
+    Degree "1" --o "*" Report : "subject of"
+    Degree "1" --o "*" Application : "attached to"
+    Job "1" --o "*" Application : "receives"
+    Student "1" --o "*" Application : "submits"
+    
+    Degree "1" --* "1" CryptoSnapshot : "contains"
+
+    %% --- EVENT FLOW RELATIONSHIPS ---
+    Report ..> FraudulentDataDetectedEvent : "publishes on Approve()"
+    FraudulentDataDetectedEvent ..> FraudulentDataEventHandler : "dispatched to"
+    FraudulentDataEventHandler --> ReputationHistory : "calculates & creates"
