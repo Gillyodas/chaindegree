@@ -3,37 +3,85 @@ config:
   layout: elk
 ---
 erDiagram
-    %% --- CORE INTEGRATIONS & RELATIONSHIPS ---
-    UNIVERSITIES ||--o{ DEGREES : "issues"
-    UNIVERSITIES ||--o{ JOBS : "partners_with"
+    %% ==========================================================
+    %% MODULE AUTH CONTEXT (PLUGGED - LOOSELY COUPLED VIA USER_ID)
+    %% ==========================================================
+    AUTH_USERS {
+        uuid id PK "Module Auth quản lý độc lập"
+        string email UK
+        string password_hash
+        boolean is_active
+    }
+
+    %% ==========================================================
+    %% CORE DOMAIN CONTEXT (MÔ ĐUN CỐT LÕI)
+    %% ==========================================================
     
+    EDUCATION_INSTITUTIONS ||--o{ REGISTRARS : "employs"
+    EDUCATION_INSTITUTIONS ||--o{ JOBS : "partners_with"
+    
+    COMPANIES ||--o{ RECRUITER_AGENTS : "employs"
+    COMPANIES ||--o{ JOBS : "owns"
+
+    REGISTRARS ||--o{ DEGREES : "issues"
     STUDENTS ||--o{ DEGREES : "owns"
-    STUDENTS ||--o{ REPORTS : "submits"
-    STUDENTS ||--o{ APPLICATIONS : "applies"
     
-    RECRUITERS ||--o{ JOBS : "creates"
-    RECRUITERS ||--o{ REPORTS : "submits"
+    STUDENTS ||--o{ REPORTS : "submits"
+    RECRUITER_AGENTS ||--o{ REPORTS : "submits"
     
     DEGREES ||--o{ REPORTS : "is_reported_by"
     DEGREES ||--o{ APPLICATIONS : "is_submitted_with"
     
     JOBS ||--o{ APPLICATIONS : "receives"
     JOBS ||--o{ JOB_DEGREE_FILTERS : "requires"
+    STUDENTS ||--o{ APPLICATIONS : "submits"
 
-    %% --- PLUGGED MODULE RELATIONSHIPS (EVENT-DRIVEN BOUNDED CONTEXT) ---
-    UNIVERSITIES ||--o{ REPUTATION_HISTORIES : "tracks_via_reputation_module"
+    %% ==========================================================
+    %% PLUGGED MODULE REPUTATION (EVENT-DRIVEN BOUNDED CONTEXT)
+    %% ==========================================================
 
-    UNIVERSITIES {
+    EDUCATION_INSTITUTIONS {
         uuid id PK
-        string code UK
+        string code UK "Mã định danh CSDT (Đại học, Trường nghề, Trung tâm)"
         string name
         string email UK
         datetime created_at
         datetime updated_at
     }
 
+    REGISTRARS {
+        uuid id PK
+        uuid institution_id FK "Thuộc CSDT nào"
+        uuid user_id "Liên kết logic sang AUTH_USERS.id (Không tạo FK cứng)"
+        string employee_code UK
+        string full_name
+        datetime created_at
+        datetime updated_at
+    }
+
+    COMPANIES {
+        uuid id PK
+        string company_name
+        string business_license_code UK "Mã số thuế / Giấy phép ĐKKD"
+        string contact_email UK
+        boolean is_verified "Trạng thái xác thực DN"
+        datetime created_at
+        datetime updated_at
+    }
+
+    RECRUITER_AGENTS {
+        uuid id PK
+        uuid company_id FK "Thuộc doanh nghiệp nào"
+        uuid user_id "Liên kết logic sang AUTH_USERS.id (Không tạo FK cứng)"
+        string full_name
+        string professional_title "Chức vụ (e.g., HR Manager, Tech Recruiter)"
+        datetime created_at
+        datetime updated_at
+    }
+
     STUDENTS {
         uuid id PK
+        uuid user_id "Liên kết logic sang AUTH_USERS.id (Không tạo FK cứng)"
         string student_code UK
         string full_name
         string email UK
@@ -41,22 +89,14 @@ erDiagram
         datetime updated_at
     }
 
-    RECRUITERS {
-        uuid id PK
-        string company_name
-        string contact_email UK
-        boolean is_verified "Trạng thái xác thực DN"
-        datetime created_at
-        datetime updated_at
-    }
-
     DEGREES {
         uuid id PK
         string degree_code UK
-        uuid university_id FK
+        uuid institution_id FK
+        uuid registrar_id FK "Ghi nhận đích danh Cán bộ ký cấp phát"
         uuid student_id FK
         string major
-        string classification
+        string classification "Xếp loại tốt nghiệp (Xuất sắc, Giỏi, Khá...)"
         string plain_data_json "Snapshot dữ liệu thô phục vụ băm đối chiếu"
         string salt
         string data_hash_local
@@ -70,7 +110,7 @@ erDiagram
         uuid id PK
         uuid degree_id FK
         string reporter_role_enum "Student | Recruiter"
-        uuid reporter_id "ID của đối tượng báo cáo"
+        uuid reporter_id "ID của đối tượng báo cáo (student_id hoặc recruiter_agent_id)"
         string report_type_enum "Administrative_Error | Fraudulent_Data"
         string description
         string evidence_url
@@ -81,7 +121,8 @@ erDiagram
 
     JOBS {
         uuid id PK
-        uuid recruiter_id FK
+        uuid company_id FK
+        uuid creator_agent_id FK "HR Agent cụ thể đăng bài"
         string title
         bigint salary_min
         bigint salary_max
@@ -113,8 +154,8 @@ erDiagram
     BEHAVIOR_LOGS {
         uuid id PK
         string action_type_enum "CREATE_DEGREE | ALTER_DEGREE | REPUTATION_CHANGED | POST_JOB | APPLY_JOB | VERIFY_DEGREE"
-        string actor_role_enum "Admin | Registrar | Student | Recruiter | System"
-        uuid actor_id
+        string actor_role "Không dùng enum để giữ tính độc lập với module Auth (Lưu chuỗi thuần)"
+        uuid actor_id "ID của User thực hiện từ hệ thống Auth"
         string target_table
         uuid target_id
         string old_values_json
@@ -123,14 +164,13 @@ erDiagram
         datetime created_at
     }
 
-    %% --- REPUTATION CONTEXT (PLUG-AND-PLAY MODULE VIA EVENTS) ---
     REPUTATION_HISTORIES {
         uuid id PK
-        uuid university_id FK
+        uuid institution_id FK "Bẻ sang mối quan hệ với EDUCATION_INSTITUTIONS"
         int old_score
         int new_score
-        string change_reason "Được trích xuất từ Event Payload"
+        string change_reason
         string status_enum "Pending_Freeze | Frozen | Freeze_Error"
         string tx_hash_blockchain
-        datetime created_at "Chỉ Insert ngầm khi nhận được Event"
+        datetime created_at
     }

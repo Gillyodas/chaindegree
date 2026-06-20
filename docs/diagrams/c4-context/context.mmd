@@ -1,0 +1,53 @@
+---
+config:
+  layout: elk
+---
+flowchart TD
+    
+    subgraph Client_Tier [TẦNG GIAO DIỆN & TÁC VỤ NGƯỜI DÙNG]
+        User([Người dùng: CSDT / DN / Sinh viên]) -->|Thao tác UI| Frontend[Frontend Application <br> SPA / Mobile App]
+        Frontend <-->|Yêu cầu Ký số / Web3| MetaMask{Ví MetaMask <br> Wallet cá nhân}
+    end
+
+    subgraph Backend_Tier [TẦNG XỬ LÝ ỨNG DỤNG - .NET CORE]
+        direction TB
+        WebAPI[Web API Server <br> ASP.NET Core]
+        BGWorker[Batching Background Worker <br> .NET Hosted Service]
+        RepEngine[Reputation Event Handler <br> .NET Integration Module]
+    end
+
+    subgraph Storage_Tier [TẦNG LƯU TRỮ TRUYỀN THỐNG & ĐỆM]
+        direction LR
+        RelationalDB[(Relational Database <br> PostgreSQL / SQL Server)]
+        MessageQueue{Message Queue Broker <br> RabbitMQ / MediatR}
+    end
+
+    subgraph Blockchain_Tier [MẠNG CHUỖI LIÊN MINH - HYPERLEDGER BESU]
+        direction TB
+        BesuNode1[Besu Validator Node 1 <br> Bộ GD & ĐT]
+        BesuNode2[Besu Validator Node 2 <br> Cơ sở Đào tạo A]
+        BesuNode3[Besu Validator Node 3 <br> Cơ sở Đào tạo B]
+        
+        SmartContract[[Smart Contracts <br> Solidity EVM]]
+    end
+    Frontend -->|Gửi HTTP Requests / JSON| WebAPI
+    WebAPI -->|1. Đọc/Ghi trạng thái thực thể| RelationalDB
+    WebAPI -->|2. Đẩy ID bằng cấp / Bắn Event| MessageQueue
+    MessageQueue -->|3. Rình hốt lô văn bằng <br> 500 items / 3 phút| BGWorker
+    BGWorker -->|4. Cập nhật trạng thái Confirmed| RelationalDB
+    BGWorker -->|5. Bắn duy nhất 1 Merkle Root| BesuNode1
+    MessageQueue -->|3b. Chuyển tiếp FraudulentEvent| RepEngine
+    RepEngine -->|4b. Ghi lịch sử điểm phạt| RelationalDB
+    RepEngine -->|5b. Ghi lệnh phạt điểm lên chuỗi| BesuNode1
+    BesuNode1 -->|Thực thi mã byte| SmartContract
+    BesuNode1 <==>|Đồng thuận QBFT ngầm <br> Đóng block theo nhu cầu| BesuNode2
+    BesuNode2 <==>|Đồng thuận QBFT ngầm <br> Không sinh block trống| BesuNode3
+    classDef clientStyle fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b;
+    classDef backendStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20;
+    classDef storageStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100;
+    classDef chainStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c;
+    
+    class User,Frontend,MetaMask clientStyle;
+    class WebAPI,BGWorker,RepEngine backendStyle;
+    class RelationalDB,MessageQueue storageStyle;
+    class BesuNode1,BesuNode2,BesuNode3,SmartContract chainStyle;
