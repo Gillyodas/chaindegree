@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChainDegree.Domain\ChainDegree.Core.Domain.csproj" />
+    <ProjectReference Include="..\ChainDegree.SharedKernel\ChainDegree.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Applications\Commands\SubmitApplication\" />
+    <Folder Include="Common\Behaviors\" />
+    <Folder Include="Common\Messaging\" />
+    <Folder Include="Degrees\Commands\IssueDegree\" />
+    <Folder Include="Degrees\Commands\UpdateDegree\" />
+    <Folder Include="Degrees\Commands\RevokeDegree\" />
+    <Folder Include="Degrees\Queries\GetDegreeById\" />
+    <Folder Include="Degrees\Queries\VerifyDegree\" />
+    <Folder Include="Jobs\Commands\CreateJob\" />
+    <Folder Include="Abstractions\" />
+  </ItemGroup>
+
+</Project>

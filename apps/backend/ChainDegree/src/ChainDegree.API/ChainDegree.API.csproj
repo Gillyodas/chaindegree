@@ -12,13 +12,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
+    <ProjectReference Include="..\ChainDegree.Application\ChainDegree.Core.Application.csproj" />
+    <ProjectReference Include="..\ChainDegree.Infrastructure\ChainDegree.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\ChainDegree.SharedKernel\ChainDegree.SharedKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ChainDegree.Application\ChainDegree.Application.csproj" />
-    <ProjectReference Include="..\ChainDegree.Infrastructure\ChainDegree.Infrastructure.csproj" />
-    <ProjectReference Include="..\ChainDegree.SharedKernel\ChainDegree.SharedKernel.csproj" />
+    <Folder Include="Institutions\" />
+    <Folder Include="Admin\" />
+    <Folder Include="Recruitment\" />
   </ItemGroup>
 
 </Project>

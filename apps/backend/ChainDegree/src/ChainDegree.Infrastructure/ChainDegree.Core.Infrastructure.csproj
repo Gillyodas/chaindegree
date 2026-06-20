@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ChainDegree.Application\ChainDegree.Core.Application.csproj" />
+    <ProjectReference Include="..\ChainDegree.Domain\ChainDegree.Core.Domain.csproj" />
+    <ProjectReference Include="..\ChainDegree.SharedKernel\ChainDegree.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Blockchain\Services\" />
+    <Folder Include="Persistence\Configurations\" />
+    <Folder Include="Persistence\Outbox\" />
+    <Folder Include="Persistence\Repositories\" />
+  </ItemGroup>
+
+</Project>
