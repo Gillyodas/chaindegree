@@ -12,16 +12,7 @@
 
   <ItemGroup>
     <Folder Include="Degrees\Entities\" />
-    <Folder Include="Degrees\Enums\" />
     <Folder Include="Degrees\Events\" />
-    <Folder Include="Degrees\ValueObjects\" />
-    <Folder Include="Jobs\" />
-    <Folder Include="Applications\" />
-    <Folder Include="SharedKernel\" />
-    <Folder Include="Reports\" />
-    <Folder Include="Recruiters\" />
-    <Folder Include="Students\" />
-    <Folder Include="Universities\Entities\" />
     <Folder Include="Universities\ValueObjects\" />
   </ItemGroup>
 
