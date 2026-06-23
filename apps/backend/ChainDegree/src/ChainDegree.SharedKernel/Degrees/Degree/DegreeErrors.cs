@@ -19,6 +19,12 @@ namespace ChainDegree.SharedKernel.Degrees.Degree
         public static readonly Error InvalidCryptoSnapshot =
             Error.Validation("Degree.InvalidCryptoSnapshot", "The cryptographic data snapshot or local hash is invalid.");
 
+        public static readonly Error EmptyCryptoSnapshot =
+            Error.Validation("Degree.EmptyCryptoSnapshot", "Crypto snapshot value cannot be empty");
+
+        public static readonly Error EmptyPlainData =
+            Error.Validation("Degree.EmptyPlainData", "Plain data value cannot be empty");
+
         public static readonly Error EmptyTransactionHash =
             Error.Validation("Degree.EmptyTransactionHash", "Blockchain transaction hash cannot be empty.");
 
