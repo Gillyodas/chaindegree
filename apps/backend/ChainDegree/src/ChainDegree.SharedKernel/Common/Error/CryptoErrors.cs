@@ -17,4 +17,10 @@ public static class CryptoErrors
 
     public static readonly Error EmptySalt =
         Error.Validation("Cryptography.EmptySalt", "Salt value cannot be empty for hashing.");
+
+    public static readonly Error CanonicalizationFailed =
+        Error.Failure("Cryptography.CanonicalizationFailed", "An error occurred while canonicalizing the object into a deterministic JSON string.");
+
+    public static readonly Error NullDataPayload =
+        Error.Validation("Cryptography.NullDataPayload", "Data payload cannot be null for canonicalization.");
 }

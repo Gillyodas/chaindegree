@@ -82,9 +82,12 @@ public class Degree
         if (cryptoData == null || string.IsNullOrEmpty(cryptoData.DataHashLocal))
             return Result<Degree>.Failure(DegreeErrors.InvalidCryptoSnapshot);
 
+        Guid degreeId = Guid.NewGuid();
+        string degreeCode = GenerateDegreeCode(totalDegree);
+
         var newDegree = new Degree(
-            Guid.NewGuid(),
-            GenerateDegreeCode(totalDegree),
+            degreeId,
+            degreeCode,
             institutionId,
             signedByRegistrarId,
             studentId,
