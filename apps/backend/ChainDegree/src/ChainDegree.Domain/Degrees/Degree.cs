@@ -2,7 +2,7 @@
 using ChainDegree.Core.Domain.Degrees.Enums;
 using ChainDegree.Core.Domain.Degrees.ValueObjects;
 using ChainDegree.Core.Domain.Reports;
-using ChainDegree.SharedKernel.Degrees.Degree;
+using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
 using ChainDegree.SharedKernel.Result;
 
 namespace ChainDegree.Core.Domain.Degrees;

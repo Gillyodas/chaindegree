@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using ChainDegree.Core.Domain.Degrees.Interfaces;
-using ChainDegree.SharedKernel.Degrees.Degree;
+using ChainDegree.SharedKernel.Common.Error;
+using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
 using ChainDegree.SharedKernel.Result;
 
 namespace ChainDegree.Core.Domain.Degrees.ValueObjects
@@ -25,7 +26,7 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
         public static Result<CryptoSnapshot> Create(string plainDataJson, IHashService hashService)
         {
             if (string.IsNullOrWhiteSpace(plainDataJson))
-                return Result<CryptoSnapshot>.Failure(DegreeErrors.EmptyPlainData);
+                return Result<CryptoSnapshot>.Failure(CryptoErrors.EmptyPlainText);
 
             var genSaltResult = hashService.GenerateSalt();
             if (genSaltResult.IsFailure) return Result<CryptoSnapshot>.Failure(genSaltResult.Error);

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using ChainDegree.SharedKernel.Common.Error;
 
-namespace ChainDegree.SharedKernel.Degrees.Degree
+namespace ChainDegree.SharedKernel.DomainErrors.Degrees.Degree
 {
     public static class DegreeErrors
     {
@@ -21,9 +21,6 @@ namespace ChainDegree.SharedKernel.Degrees.Degree
 
         public static readonly Error EmptyCryptoSnapshot =
             Error.Validation("Degree.EmptyCryptoSnapshot", "Crypto snapshot value cannot be empty");
-
-        public static readonly Error EmptyPlainData =
-            Error.Validation("Degree.EmptyPlainData", "Plain data value cannot be empty");
 
         public static readonly Error EmptyTransactionHash =
             Error.Validation("Degree.EmptyTransactionHash", "Blockchain transaction hash cannot be empty.");
