@@ -22,12 +22,6 @@ public class Degree
     public DateTime IssuedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
-    private readonly List<Report> _reports = new();
-    public IReadOnlyCollection<Report> Reports => _reports.AsReadOnly();
-
-    private readonly List<Application> _applications = new();
-    public IReadOnlyCollection<Application> Applications => _applications.AsReadOnly();
-
     // Constructor phục vụ tạo mới thực thể
     private Degree(
         Guid id,

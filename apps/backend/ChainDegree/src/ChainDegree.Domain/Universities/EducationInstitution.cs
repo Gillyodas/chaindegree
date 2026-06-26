@@ -17,8 +17,5 @@ namespace ChainDegree.Core.Domain.Universities
 
         private readonly List<Registrar> _registrars = new();
         public IReadOnlyCollection<Registrar> Registrars => _registrars.AsReadOnly();
-
-        private readonly List<Degree> _degrees = new();
-        public IReadOnlyCollection<Degree> Degrees => _degrees.AsReadOnly();
     }
 }
