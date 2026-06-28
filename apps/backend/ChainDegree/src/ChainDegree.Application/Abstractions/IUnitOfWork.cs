@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ChainDegree.Core.Infrastructure.Configurations
+namespace ChainDegree.Core.Application.Abstractions
 {
-    public class BesuOptions
+    public interface IUnitOfWork
     {
     }
 }

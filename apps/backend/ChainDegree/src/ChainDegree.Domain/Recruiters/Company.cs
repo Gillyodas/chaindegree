@@ -9,7 +9,7 @@ using ChainDegree.Core.Domain.SharedKernel;
 
 namespace ChainDegree.Core.Domain.Recruiters
 {
-    public class Company : Entity
+    public class Company : AggregateRoot
     {
         public Guid Id { get; private set; }
         public string CompanyName { get; private set; } = null!;
@@ -34,7 +34,7 @@ namespace ChainDegree.Core.Domain.Recruiters
             this.CompanyStatus = CompanyStatusEnum.Deactivated;
             this.UpdatedAt = DateTime.UtcNow;
 
-            AddDomainEvent(new CompanyDeactivatedEvent(this.Id));
+            RaiseDomainEvent(new CompanyDeactivatedEvent(this.Id));
         }
     }
 }

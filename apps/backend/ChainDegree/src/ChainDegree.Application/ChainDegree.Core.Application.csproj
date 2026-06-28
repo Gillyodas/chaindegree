@@ -15,13 +15,16 @@
     <Folder Include="Applications\Commands\SubmitApplication\" />
     <Folder Include="Common\Behaviors\" />
     <Folder Include="Common\Messaging\" />
-    <Folder Include="Degrees\Commands\IssueDegree\" />
     <Folder Include="Degrees\Commands\UpdateDegree\" />
     <Folder Include="Degrees\Commands\RevokeDegree\" />
     <Folder Include="Degrees\Queries\GetDegreeById\" />
     <Folder Include="Degrees\Queries\VerifyDegree\" />
     <Folder Include="Jobs\Commands\CreateJob\" />
-    <Folder Include="Abstractions\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="MediatR" Version="14.1.0" />
   </ItemGroup>
 
 </Project>

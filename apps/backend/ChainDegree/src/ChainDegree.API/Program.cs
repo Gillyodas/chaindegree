@@ -1,4 +1,5 @@
-using ChainDegree.Infrastructure.Configurations;
+using ChainDegree.Core.Infrastructure.Configurations;
+using ChainDegree.Core.Infrastructure.Persistence;
 using DotNetEnv;
 namespace ChainDegree.API
 {
@@ -13,6 +14,8 @@ namespace ChainDegree.API
                 DotNetEnv.Env.TraversePath().Load();
             }
             builder.Configuration.AddEnvironmentVariables();
+
+            builder.Services.AddInfrastructure(builder.Configuration);
 
             builder.Services.Configure<JwtOptions>(
                 builder.Configuration.GetSection(JwtOptions.SectionName));

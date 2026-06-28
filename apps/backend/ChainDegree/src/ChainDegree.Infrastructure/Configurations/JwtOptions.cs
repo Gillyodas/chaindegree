@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ChainDegree.Infrastructure.Configurations
+namespace ChainDegree.Core.Infrastructure.Configurations
 {
     public class JwtOptions
     {
