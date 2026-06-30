@@ -8,7 +8,7 @@ namespace ChainDegree.Core.Domain.SharedKernel
     public class BehaviorLog
     {
         public Guid Id { get; private set; }
-        public ActionTypeEnum ActionTypeEnum { get; private set; }
+        public ActionTypeEnum ActionType { get; private set; }
         public string ActorRole { get; private set; } = null!;
         public Guid ActorId { get; private set; }
         public string TargetTable { get; private set; } = null!;
