@@ -1,3 +1,4 @@
+using ChainDegree.Core.Application;
 using ChainDegree.Core.Infrastructure.Configurations;
 using ChainDegree.Core.Infrastructure.Persistence;
 using DotNetEnv;
@@ -15,6 +16,7 @@ namespace ChainDegree.API
             }
             builder.Configuration.AddEnvironmentVariables();
 
+            builder.Services.AddApplication();
             builder.Services.AddInfrastructure(builder.Configuration);
 
             builder.Services.Configure<JwtOptions>(

@@ -22,5 +22,8 @@ This document defines the operational rules for the Antigravity AI assistant wit
 - **Rule**: At the end of every task or major interaction, log the tools and skills that were utilized.
 - **Format**: Include a "Tools & Skills Used" section in the final response.
 
+## 4. No Shortcuts Rule
+- **Rule**: Không đi đường tắt, chỉ cần đi theo đường chính quy để hoàn thiện một yêu cầu. Nhất quyết không được đối phó để hoàn thành yêu cầu.
+
 ---
 *Created on 2026-05-08*
