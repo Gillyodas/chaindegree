@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using ChainDegree.SharedKernel.Result;
 using ChainDegree.SharedKernel.Common.Error;
@@ -9,15 +11,39 @@ namespace ChainDegree.Core.API
     public abstract class ApiControllerBase : ControllerBase
     {
         /// <summary>
-        /// Xử lý kết quả trả về từ Result Pattern
+        /// Xử lý kết quả trả về từ Result Pattern cho các request thông thường (200 OK)
         /// </summary>
         protected IActionResult ProcessResult<T>(Result<T> result)
         {
             if (result.IsSuccess)
             {
-                // Nếu thành công, mặc định trả về 200 OK. 
-                // Với trường hợp 201 Created, bạn nên override hoặc gọi hàm cụ thể hơn.
                 return Ok(result.Value);
+            }
+
+            return HandleFailure(result);
+        }
+
+        /// <summary>
+        /// Xử lý kết quả trả về cho việc tạo mới tài nguyên (201 Created)
+        /// </summary>
+        protected IActionResult ProcessCreatedResult<T>(Result<T> result, string actionName, object? routeValues)
+        {
+            if (result.IsSuccess)
+            {
+                return CreatedAtAction(actionName, routeValues, result.Value);
+            }
+
+            return HandleFailure(result);
+        }
+
+        /// <summary>
+        /// Xử lý kết quả trả về cho các xử lý bất đồng bộ hoặc được chấp nhận (202 Accepted)
+        /// </summary>
+        protected IActionResult ProcessAcceptedResult<T>(Result<T> result)
+        {
+            if (result.IsSuccess)
+            {
+                return Accepted(result.Value);
             }
 
             return HandleFailure(result);
@@ -33,7 +59,6 @@ namespace ChainDegree.Core.API
                 throw new InvalidOperationException("Cannot handle failure for a successful result.");
             }
 
-            // Map ErrorType sang mã HTTP
             var statusCode = result.Error.Type switch
             {
                 ErrorType.Validation => StatusCodes.Status400BadRequest,
@@ -44,7 +69,6 @@ namespace ChainDegree.Core.API
                 _ => StatusCodes.Status500InternalServerError
             };
 
-            // Trả về ProblemDetails theo chuẩn
             return Problem(
                 statusCode: statusCode,
                 title: GetTitle(result.Error.Type),
