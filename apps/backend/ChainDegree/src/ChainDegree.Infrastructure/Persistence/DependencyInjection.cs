@@ -2,6 +2,7 @@ using ChainDegree.Core.Application.Abstractions;
 using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Infrastructure.Persistence.Interceptors;
 using ChainDegree.Core.Infrastructure.Auth;
+using ChainDegree.Core.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddScoped<ICurrentUserAccessor, FakeCurrentUserAccessor>();
             services.AddScoped<IInstitutionOwnershipChecker, FakeInstitutionOwnershipChecker>();
             services.AddScoped<IRoleChecker, FakeRoleChecker>();
+
+            // Register services
+            services.AddScoped<IBehaviorLogService, BehaviorLogService>();
 
             // Register interceptors
             services.AddScoped<AuditableEntityInterceptor>();

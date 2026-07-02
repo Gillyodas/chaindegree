@@ -1,4 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using FluentValidation;
+using MediatR;
+using ChainDegree.Core.Application.Common.Behaviors;
 
 namespace ChainDegree.Core.Application
 {
@@ -6,7 +9,15 @@ namespace ChainDegree.Core.Application
     {
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+            // Register all validators from the application assembly
+            services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+
+            // Configure MediatR with pipeline behaviors
+            services.AddMediatR(cfg =>
+            {
+                cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+                cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
+            });
 
             return services;
         }
