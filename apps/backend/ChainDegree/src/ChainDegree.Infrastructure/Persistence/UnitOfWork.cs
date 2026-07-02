@@ -42,14 +42,14 @@ namespace ChainDegree.Core.Infrastructure.Persistence
         {
             if (_currentTransaction != null)
             {
-                throw new InvalidOperationException("Transaction đã bắt đầu hoạt động. Không hỗ trợ transaction lồng nhau"); 
+                throw new InvalidOperationException("Transaction has already started. Nested transactions are not supported."); 
             }
 
             _currentTransaction = await _dbContext.Database.BeginTransactionAsync(ct);
 
             _logger.LogInformation("{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId}",
-                PersistenceLogs.Persistence_TransactionDaBatDau,
-                PersistenceLogs.Persistence_TransactionDaBatDau.Message,
+                PersistenceLogs.Persistence_TransactionStarted,
+                PersistenceLogs.Persistence_TransactionStarted.Message,
                 _currentTransaction.TransactionId);
 
             return new DbContextTransactionAdapter(_currentTransaction);
@@ -68,8 +68,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                 try
                 {
                     _logger.LogInformation("{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId}",
-                        PersistenceLogs.Persistence_ImplicitTransactionDaBatDau,
-                        PersistenceLogs.Persistence_ImplicitTransactionDaBatDau.Message,
+                        PersistenceLogs.Persistence_ImplicitTransactionStarted,
+                        PersistenceLogs.Persistence_ImplicitTransactionStarted.Message,
                         transaction.TransactionId);
                     
                     changes = await SaveChangesAsync(ct);
@@ -77,8 +77,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                     
                     _logger.LogInformation(
                         "{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId} | Changes: {Changes}",
-                        PersistenceLogs.Persistence_ImplicitTransactionDaCommit,
-                        PersistenceLogs.Persistence_ImplicitTransactionDaCommit.Message,
+                        PersistenceLogs.Persistence_ImplicitTransactionCommitted,
+                        PersistenceLogs.Persistence_ImplicitTransactionCommitted.Message,
                         transaction.TransactionId,
                         changes);
                 }
@@ -86,8 +86,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                 {
                     _logger.LogError(ex,
                         "{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId}",
-                        PersistenceLogs.Persistence_ImplicitTransactionThatBai,
-                        PersistenceLogs.Persistence_ImplicitTransactionThatBai.Message,
+                        PersistenceLogs.Persistence_ImplicitTransactionFailed,
+                        PersistenceLogs.Persistence_ImplicitTransactionFailed.Message,
                         transaction.TransactionId);
                     await SafeRollbackAsync(transaction, ct);
                     _dbContext.ChangeTracker.Clear();
@@ -110,16 +110,16 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                 await _currentTransaction.CommitAsync(ct);
                 _logger.LogInformation(
                     "{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId}",
-                    PersistenceLogs.Persistence_ExplicitTransactionDaCommit,
-                    PersistenceLogs.Persistence_ExplicitTransactionDaCommit.Message,
+                    PersistenceLogs.Persistence_ExplicitTransactionCommitted,
+                    PersistenceLogs.Persistence_ExplicitTransactionCommitted.Message,
                     _currentTransaction.TransactionId);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex,
                     "{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId}",
-                    PersistenceLogs.Persistence_ExplicitTransactionCommitThatBai,
-                    PersistenceLogs.Persistence_ExplicitTransactionCommitThatBai.Message,
+                    PersistenceLogs.Persistence_ExplicitTransactionCommitFailed,
+                    PersistenceLogs.Persistence_ExplicitTransactionCommitFailed.Message,
                     _currentTransaction.TransactionId);
                 await SafeRollbackAsync(_currentTransaction, ct);
                 throw;
@@ -140,8 +140,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                 await _currentTransaction.RollbackAsync(ct);
                 _logger.LogWarning(
                     "{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId}",
-                    PersistenceLogs.Persistence_ExplicitTransactionDaRollback,
-                    PersistenceLogs.Persistence_ExplicitTransactionDaRollback.Message,
+                    PersistenceLogs.Persistence_ExplicitTransactionRolledBack,
+                    PersistenceLogs.Persistence_ExplicitTransactionRolledBack.Message,
                     _currentTransaction.TransactionId);
             }
             finally
@@ -162,8 +162,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             {
                 _logger.LogError(ex,
                     "{@LogCode} | Message: {@LogMessage}",
-                    PersistenceLogs.Persistence_XungDotDongThoi,
-                    PersistenceLogs.Persistence_XungDotDongThoi.Message);
+                    PersistenceLogs.Persistence_ConcurrencyConflict,
+                    PersistenceLogs.Persistence_ConcurrencyConflict.Message);
                 throw new RepositoryConcurrencyException(
                     "A concurrency conflict occurred.", ex);
             }
@@ -171,8 +171,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             {
                 _logger.LogError(ex,
                     "{@LogCode} | Message: {@LogMessage}",
-                    PersistenceLogs.Persistence_LoiCapNhatCSDL,
-                    PersistenceLogs.Persistence_LoiCapNhatCSDL.Message);
+                    PersistenceLogs.Persistence_DatabaseUpdateError,
+                    PersistenceLogs.Persistence_DatabaseUpdateError.Message);
                 throw new RepositoryException(
                     "A database update error occurred.", ex);
             }
@@ -185,16 +185,16 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                 await transaction.RollbackAsync(ct);
                 _logger.LogWarning(
                     "{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId}",
-                    PersistenceLogs.Persistence_TransactionDaRollback,
-                    PersistenceLogs.Persistence_TransactionDaRollback.Message,
+                    PersistenceLogs.Persistence_TransactionRolledBack,
+                    PersistenceLogs.Persistence_TransactionRolledBack.Message,
                     transaction.TransactionId);
             }
             catch (Exception rollbackEx)
             {
                 _logger.LogCritical(rollbackEx,
                     "{@LogCode} | Message: {@LogMessage} | TransactionId: {TransactionId}",
-                    PersistenceLogs.Persistence_RollbackThatBai,
-                    PersistenceLogs.Persistence_RollbackThatBai.Message,
+                    PersistenceLogs.Persistence_RollbackFailed,
+                    PersistenceLogs.Persistence_RollbackFailed.Message,
                     transaction.TransactionId);
             }
         }

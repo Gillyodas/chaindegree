@@ -51,6 +51,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence
         public DbSet<DomainApplication> Applications => Set<DomainApplication>();
         public DbSet<ApplicationAttachedDegree> ApplicationAttachedDegrees => Set<ApplicationAttachedDegree>();
         public DbSet<BehaviorLog> BehaviorLogs => Set<BehaviorLog>();
+        public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

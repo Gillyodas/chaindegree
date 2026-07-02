@@ -1,6 +1,8 @@
 using ChainDegree.Core.Application.Abstractions;
 using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Infrastructure.Persistence.Interceptors;
+using ChainDegree.Core.Infrastructure.Persistence.Outbox;
+using ChainDegree.Core.Infrastructure.Configurations;
 using ChainDegree.Core.Infrastructure.Auth;
 using ChainDegree.Core.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
@@ -23,10 +25,16 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             // Register services
             services.AddScoped<IBehaviorLogService, BehaviorLogService>();
 
+            // Register configurations
+            services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
+
+            // Register background workers
+            services.AddHostedService<OutboxProcessor>();
+
             // Register interceptors
             services.AddScoped<AuditableEntityInterceptor>();
             services.AddScoped<SoftDeleteInterceptor>();
-            services.AddScoped<DispatchDomainEventsInterceptor>();
+            services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
 
             // Register DbContext
             services.AddDbContext<ChainDegreeDbContext>((sp, options) =>
@@ -36,7 +44,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                        .AddInterceptors(
                            sp.GetRequiredService<AuditableEntityInterceptor>(),
                            sp.GetRequiredService<SoftDeleteInterceptor>(),
-                           sp.GetRequiredService<DispatchDomainEventsInterceptor>());
+                           sp.GetRequiredService<ConvertDomainEventsToOutboxInterceptor>());
             });
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
