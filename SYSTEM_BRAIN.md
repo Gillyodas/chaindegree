@@ -1,0 +1,62 @@
+# System Brain - ChainDegree Project Map
+
+Documenting the core architecture, classes, and logic of ChainDegree.
+
+---
+
+## 1. Domain Base Primitives (`ChainDegree.Core.Domain`)
+
+### Core Entities & Base Classes
+
+- **[Entity](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/SharedKernel/Entity.cs)**: Base abstract class for all tracked entities.
+  - Implements `IAuditableEntity` and `ISoftDeletable`.
+  - Properties: `Id` (Guid), `CreatedAt` (DateTime), `UpdatedAt` (DateTime), `CreatedBy` (Guid), `UpdatedBy` (Guid), `DeletedAt` (DateTime?).
+- **[AggregateRoot](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/SharedKernel/AggregateRoot.cs)**: Inherits from `Entity`. Maintains private list of domain events `IDomainEvent` and provides `RaiseDomainEvent` / `ClearDomainEvents`.
+- **[IInstitutionScoped](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/SharedKernel/Interfaces/IInstitutionScoped.cs)**: Interface marker for entities scoped strictly to a single education institution. Checked dynamically in EF global query filters.
+
+### Main Entities
+
+- **[Degree](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/Degrees/Degree.cs)**: Main entity for academic degrees. Inherits `AggregateRoot` and implements `IInstitutionScoped`.
+  - Value Object: `CryptoData` (owns one `CryptoSnapshot` containing `PlainDataJson`, `Salt`, `DataHashLocal`).
+- **[Student](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/Students/Student.cs)**: Represents students. Inherits `AggregateRoot`.
+  - Properties: `IdentityNumber` (CCCD - unique identifier), `FullName`, `Email`, `UserId`.
+  - *Note*: Not institution-scoped directly as students can hold degrees from multiple institutions.
+- **[InstitutionStudent](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/Universities/Entities/InstitutionStudent.cs)**: Junction table managing student enrollment per institution.
+  - Properties: `InstitutionId`, `StudentId`, `StudentCode` (student code at this specific institution), `EnrolledAt`.
+- **[EducationInstitution](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/Universities/EducationInstitution.cs)**: Represents universities. Inherits `Entity`.
+- **[Registrar](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/Universities/Entities/Registrar.cs)**: Represents registrars. Inherits `Entity` and implements `IInstitutionScoped`.
+- **[BehaviorLog](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/SharedKernel/BehaviorLog.cs)**: Append-only state logging entity. Creates instances via `CreateAudit()`.
+
+---
+
+## 2. Infrastructure Layer (`ChainDegree.Core.Infrastructure`)
+
+### Persistence & Hardening
+
+- **[ChainDegreeDbContext](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/ChainDegreeDbContext.cs)**: EF Core context.
+  - Configures dynamic query filters in `OnModelCreating`:
+    - `ISoftDeletable`: filters where `DeletedAt == null`.
+    - `IInstitutionScoped`: filters where `InstitutionId == CurrentUserAccessor.InstitutionId`.
+- **[AuditableEntityInterceptor](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/Interceptors/AuditableEntityInterceptor.cs)**: Sets `CreatedAt`/`CreatedBy`/`UpdatedAt`/`UpdatedBy` automatically.
+- **[SoftDeleteInterceptor](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/Interceptors/SoftDeleteInterceptor.cs)**: Intercepts `Deleted` states of `ISoftDeletable` entities and modifies them to set `DeletedAt = DateTime.UtcNow`.
+- **[UnitOfWork](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/UnitOfWork.cs)**: Full transaction manager supporting implicit/explicit transactions, structured logging, safe rollbacks, and DbContext error wrapping.
+
+### Outbox Pattern
+
+- **[OutboxMessage](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/SharedKernel/OutboxMessage.cs)**: Persistable domain event container.
+- **[ConvertDomainEventsToOutboxInterceptor](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/Interceptors/ConvertDomainEventsToOutboxInterceptor.cs)**: Serializes raised domain events into `OutboxMessage` entities within the save changes transaction.
+- **[OutboxProcessor](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/Outbox/OutboxProcessor.cs)**: Periodic background processor that polls `OUTBOX_MESSAGES` table, publishes events using MediatR, and records progress/errors.
+
+---
+
+## 3. Application Services & Abstractions (`ChainDegree.Core.Application`)
+
+### Auth Abstractions
+
+- **[ICurrentUserAccessor](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Abstractions/Auth/ICurrentUserAccessor.cs)**: Exposes current user details (UserId, Role, InstitutionId, IpAddress). Implemented temporarily via `FakeCurrentUserAccessor`.
+- **[IInstitutionOwnershipChecker](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Abstractions/Auth/IInstitutionOwnershipChecker.cs)**: Checks registrar institution bounds.
+- **[IRoleChecker](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Abstractions/Auth/IRoleChecker.cs)**: Checks role permissions.
+
+### Pipeline Behaviors
+
+- **[ValidationBehavior](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Common/Behaviors/ValidationBehavior.cs)**: MediatR open pipeline behavior that executes FluentValidation validators and returns generic error `Result` collections instead of throwing exceptions.
