@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 using ChainDegree.Core.Domain.Reports.Enums;
+using ChainDegree.Core.Domain.SharedKernel;
 
 namespace ChainDegree.Core.Domain.Reports
 {
-    public class Report
+    public class Report : Entity
     {
-        public Guid Id { get; private set; }
         public Guid TargetDegreeId { get; private set; }
         public Guid ReporterId { get; private set; }
         public string ReporterRole { get; private set; } = null!; // Student | Recruiter
@@ -15,7 +13,6 @@ namespace ChainDegree.Core.Domain.Reports
         public string Description { get; private set; } = null!;
         public string? EvidenceFileUrl { get; private set; }
         public ReportStatusEnum Status { get; private set; }
-        public DateTime CreatedAt { get; private set; }
         public DateTime? ReviewedAt { get; private set; }
 
         public void Approve()

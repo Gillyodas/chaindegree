@@ -1,8 +1,8 @@
-﻿using ChainDegree.Core.Domain.SharedKernel.Interfaces;
+using ChainDegree.Core.Domain.SharedKernel.Interfaces;
 
 namespace ChainDegree.Core.Domain.SharedKernel
 {
-    public abstract class AggregateRoot
+    public abstract class AggregateRoot : Entity
     {
         private readonly List<IDomainEvent> _domainEvents = new List<IDomainEvent>();
 

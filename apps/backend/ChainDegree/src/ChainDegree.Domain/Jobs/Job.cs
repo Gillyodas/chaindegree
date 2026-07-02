@@ -1,19 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Text;
-using ChainDegree.Core.Domain.Applications;
 using ChainDegree.Core.Domain.Applications.Enums;
 using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Jobs.Entities;
 using ChainDegree.Core.Domain.Jobs.Enums;
+using ChainDegree.Core.Domain.SharedKernel;
 using ChainDegree.SharedKernel.DomainErrors.Jobs;
 using ChainDegree.SharedKernel.Result;
 
 namespace ChainDegree.Core.Domain.Jobs
 {
-    public class Job
+    public class Job : AggregateRoot
     {
-        public Guid Id { get; private set; }
         public Guid CompanyId { get; private set; }
         public Guid CreatedByAgentId { get; private set; }
         public Guid? PartnerUniversityId { get; private set; }
@@ -24,8 +22,6 @@ namespace ChainDegree.Core.Domain.Jobs
         public DateTime ApplicationStartDate { get; private set; }
         public DateTime ApplicationEndDate { get; private set; }
         public JobStatusEnum Status { get; private set; }
-        public DateTime CreatedAt { get; private set; }
-        public DateTime UpdatedAt { get; private set; }
 
         public bool IsExpired => DateTime.UtcNow > ApplicationEndDate;
 
@@ -100,7 +96,7 @@ namespace ChainDegree.Core.Domain.Jobs
                 salaryMax,
                 actualStartDate,
                 applicationEndDate,
-                JobStatusEnum.Draft // Mặc định khi tạo mới là nháp hoặc tùy nghiệp vụ
+                JobStatusEnum.Draft
             );
 
             return Result<Job>.Success(job);

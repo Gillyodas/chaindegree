@@ -3,42 +3,44 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ChainDegree.Core.Domain.Reports;
 using ChainDegree.Core.Domain.Degrees;
 
-namespace ChainDegree.Core.Infrastructure.Persistence.Configurations;
-
-public class ReportConfiguration : IEntityTypeConfiguration<Report>
+namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
 {
-    public void Configure(EntityTypeBuilder<Report> builder)
+    public class ReportConfiguration : BaseEntityConfiguration<Report>
     {
-        builder.ToTable("REPORTS");
-        builder.HasKey(x => x.Id);
+        public override void Configure(EntityTypeBuilder<Report> builder)
+        {
+            builder.ToTable("REPORTS");
+            builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.ReporterRole)
-               .HasConversion<string>()
-               .HasMaxLength(20)
-               .IsRequired();
+            builder.Property(x => x.ReporterRole)
+                   .HasConversion<string>()
+                   .HasMaxLength(20)
+                   .IsRequired();
 
-        builder.Property(x => x.ReporterId).IsRequired();
-        builder.HasIndex(x => x.ReporterId);
+            builder.Property(x => x.ReporterId).IsRequired();
+            builder.HasIndex(x => x.ReporterId);
 
-        builder.Property(x => x.ReportType)
-               .HasConversion<string>()
-               .HasMaxLength(50)
-               .IsRequired();
+            builder.Property(x => x.ReportType)
+                   .HasConversion<string>()
+                   .HasMaxLength(50)
+                   .IsRequired();
 
-        builder.Property(x => x.Description).HasColumnType("nvarchar(max)");
-        builder.Property(x => x.EvidenceFileUrl).HasMaxLength(500);
+            builder.Property(x => x.Description).HasColumnType("nvarchar(max)");
+            builder.Property(x => x.EvidenceFileUrl).HasMaxLength(500);
 
-        builder.Property(x => x.Status)
-               .HasConversion<string>()
-               .HasMaxLength(50)
-               .IsRequired();
+            builder.Property(x => x.Status)
+                   .HasConversion<string>()
+                   .HasMaxLength(50)
+                   .IsRequired();
 
-        builder.Property(x => x.CreatedAt).IsRequired();
-        builder.Property(x => x.ReviewedAt);
+            builder.Property(x => x.ReviewedAt);
 
-        builder.HasOne<Degree>()
-               .WithMany()
-               .HasForeignKey(x => x.TargetDegreeId)
-               .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<Degree>()
+                   .WithMany()
+                   .HasForeignKey(x => x.TargetDegreeId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            base.Configure(builder);
+        }
     }
 }

@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Jobs.Enums;
+using ChainDegree.Core.Domain.SharedKernel;
 
 namespace ChainDegree.Core.Domain.Jobs.Entities
 {
-    public class JobDegreeFilter
+    public class JobDegreeFilter : Entity
     {
-        public Guid Id { get; private set; }
         public Guid JobId { get; private set; }
         public DegreeTypeEnum DegreeType { get; private set; }
         public string RequiredMajor { get; private set; } = null!;

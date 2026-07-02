@@ -5,44 +5,45 @@ using ChainDegree.Core.Domain.Recruiters;
 using ChainDegree.Core.Domain.Recruiters.Entities;
 using ChainDegree.Core.Domain.Universities;
 
-namespace ChainDegree.Core.Infrastructure.Persistence.Configurations;
-
-public class JobConfiguration : IEntityTypeConfiguration<Job>
+namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
 {
-    public void Configure(EntityTypeBuilder<Job> builder)
+    public class JobConfiguration : BaseEntityConfiguration<Job>
     {
-        builder.ToTable("JOBS");
-        builder.HasKey(x => x.Id);
+        public override void Configure(EntityTypeBuilder<Job> builder)
+        {
+            builder.ToTable("JOBS");
+            builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Title).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.SalaryMin).HasPrecision(18, 2);
-        builder.Property(x => x.SalaryMax).HasPrecision(18, 2);
-        builder.Property(x => x.Description).HasColumnType("nvarchar(max)");
-        
-        builder.Property(x => x.Status)
-               .HasConversion<string>()
-               .HasMaxLength(50)
-               .IsRequired();
+            builder.Property(x => x.Title).HasMaxLength(255).IsRequired();
+            builder.Property(x => x.SalaryMin).HasPrecision(18, 2);
+            builder.Property(x => x.SalaryMax).HasPrecision(18, 2);
+            builder.Property(x => x.Description).HasColumnType("nvarchar(max)");
+            
+            builder.Property(x => x.Status)
+                   .HasConversion<string>()
+                   .HasMaxLength(50)
+                   .IsRequired();
 
-        builder.Property(x => x.ApplicationStartDate).IsRequired();
-        builder.Property(x => x.ApplicationEndDate).IsRequired();
-        builder.Property(x => x.CreatedAt).IsRequired();
-        builder.Property(x => x.UpdatedAt).IsRequired();
+            builder.Property(x => x.ApplicationStartDate).IsRequired();
+            builder.Property(x => x.ApplicationEndDate).IsRequired();
 
-        // Company -> Job: chỉ FK, KHÔNG navigation 2 chiều
-        builder.HasOne<Company>()
-               .WithMany()
-               .HasForeignKey(x => x.CompanyId)
-               .OnDelete(DeleteBehavior.Cascade); // xoá Company thì xoá Job liên quan
+            // Company -> Job: cascade on delete
+            builder.HasOne<Company>()
+                   .WithMany()
+                   .HasForeignKey(x => x.CompanyId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne<RecruiterAgent>()
-               .WithMany()
-               .HasForeignKey(x => x.CreatedByAgentId)
-               .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<RecruiterAgent>()
+                   .WithMany()
+                   .HasForeignKey(x => x.CreatedByAgentId)
+                   .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne<EducationInstitution>()
-               .WithMany()
-               .HasForeignKey(x => x.PartnerUniversityId)
-               .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne<EducationInstitution>()
+                   .WithMany()
+                   .HasForeignKey(x => x.PartnerUniversityId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            base.Configure(builder);
+        }
     }
 }

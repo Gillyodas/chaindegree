@@ -1,6 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using ChainDegree.Core.Application.Abstractions;
 using ChainDegree.Core.Infrastructure.Persistence.Interceptors;
 using Microsoft.Extensions.Configuration;
@@ -14,19 +11,23 @@ namespace ChainDegree.Core.Infrastructure.Persistence
         public static IServiceCollection AddInfrastructure(
             this IServiceCollection services, IConfiguration configuration)
         {
-            // 1. Đăng ký interceptor TRƯỚC, vì AddDbContext cần resolve nó qua sp
+            // Register interceptors
+            services.AddScoped<AuditableEntityInterceptor>();
+            services.AddScoped<SoftDeleteInterceptor>();
             services.AddScoped<DispatchDomainEventsInterceptor>();
 
-            // 2. Đăng ký DbContext, lấy interceptor từ container
+            // Register DbContext
             services.AddDbContext<ChainDegreeDbContext>((sp, options) =>
             {
                 var connectionString = configuration.GetConnectionString("ChainDegree");
                 options.UseSqlServer(connectionString)
-                       .AddInterceptors(sp.GetRequiredService<DispatchDomainEventsInterceptor>());
+                       .AddInterceptors(
+                           sp.GetRequiredService<AuditableEntityInterceptor>(),
+                           sp.GetRequiredService<SoftDeleteInterceptor>(),
+                           sp.GetRequiredService<DispatchDomainEventsInterceptor>());
             });
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            // ... các repo khác
 
             return services;
         }

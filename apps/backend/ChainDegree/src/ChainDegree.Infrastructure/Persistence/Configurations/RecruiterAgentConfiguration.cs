@@ -4,29 +4,29 @@ using ChainDegree.Core.Domain.Recruiters;
 using ChainDegree.Core.Domain.Recruiters.Entities;
 using ChainDegree.Core.Domain.Auth;
 
-namespace ChainDegree.Core.Infrastructure.Persistence.Configurations;
-
-public class RecruiterAgentConfiguration : IEntityTypeConfiguration<RecruiterAgent>
+namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
 {
-    public void Configure(EntityTypeBuilder<RecruiterAgent> builder)
+    public class RecruiterAgentConfiguration : BaseEntityConfiguration<RecruiterAgent>
     {
-        builder.ToTable("RECRUITER_AGENTS");
-        builder.HasKey(x => x.Id);
+        public override void Configure(EntityTypeBuilder<RecruiterAgent> builder)
+        {
+            builder.ToTable("RECRUITER_AGENTS");
+            builder.HasKey(x => x.Id);
 
-        builder.HasOne<AuthUser>()
-               .WithMany()
-               .HasForeignKey(x => x.UserId)
-               .OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(x => x.UserId);
+            builder.HasOne<AuthUser>()
+                   .WithMany()
+                   .HasForeignKey(x => x.UserId)
+                   .OnDelete(DeleteBehavior.Restrict);
+            builder.HasIndex(x => x.UserId);
 
-        builder.Property(x => x.AgentName).HasMaxLength(255).IsRequired();
+            builder.Property(x => x.AgentName).HasMaxLength(255).IsRequired();
 
-        builder.Property(x => x.CreatedAt).IsRequired();
-        builder.Property(x => x.UpdatedAt).IsRequired();
+            builder.HasOne<Company>()
+                   .WithMany(c => c.RecruiterAgents)
+                   .HasForeignKey(x => x.CompanyId)
+                   .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne<Company>()
-               .WithMany(c => c.RecruiterAgents)
-               .HasForeignKey(x => x.CompanyId)
-               .OnDelete(DeleteBehavior.Restrict);
+            base.Configure(builder);
+        }
     }
 }
