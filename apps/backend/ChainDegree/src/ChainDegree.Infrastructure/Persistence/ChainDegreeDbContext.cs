@@ -79,13 +79,14 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                     if (isInstitutionScoped)
                     {
                         var institutionIdProperty = Expression.Property(parameter, nameof(IInstitutionScoped.InstitutionId));
+                        var nullableInstitutionId = Expression.Convert(institutionIdProperty, typeof(Guid?));
                         
                         // Reference the DbContext field _currentInstitutionId on 'this' context
                         var contextExpression = Expression.Constant(this);
                         var currentInstIdField = typeof(ChainDegreeDbContext).GetField(nameof(_currentInstitutionId), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                         var capturedValue = Expression.Field(contextExpression, currentInstIdField!);
                         
-                        var equalExpression = Expression.Equal(institutionIdProperty, capturedValue);
+                        var equalExpression = Expression.Equal(nullableInstitutionId, capturedValue);
 
                         if (filter == null)
                         {
