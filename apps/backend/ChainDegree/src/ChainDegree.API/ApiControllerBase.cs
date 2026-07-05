@@ -71,7 +71,6 @@ namespace ChainDegree.Core.API
 
             return Problem(
                 statusCode: statusCode,
-                title: GetTitle(result.Error.Type),
                 detail: result.Error.Message,
                 extensions: new Dictionary<string, object?>
                 {
@@ -79,15 +78,5 @@ namespace ChainDegree.Core.API
                 }
             );
         }
-
-        private static string GetTitle(ErrorType type) => type switch
-        {
-            ErrorType.Validation => "Bad Request - Validation Error",
-            ErrorType.Unauthorized => "Unauthorized Access",
-            ErrorType.Forbidden => "Permission Denied",
-            ErrorType.NotFound => "Resource Not Found",
-            ErrorType.Conflict => "Data Conflict",
-            _ => "Server Error"
-        };
     }
 }
