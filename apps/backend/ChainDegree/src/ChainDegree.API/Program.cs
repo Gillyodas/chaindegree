@@ -36,7 +36,7 @@ namespace ChainDegree.API
 
             // Register custom filters and factories
             builder.Services.AddScoped<GlobalExceptionFilterAttribute>();
-            builder.Services.AddSingleton<ProblemDetailsFactory, ValidationProblemDetailsFactory>();
+            builder.Services.AddSingleton<ProblemDetailsFactory, ChainDegreeProblemDetailsFactory>();
 
             builder.Services.AddControllers(options =>
             {
