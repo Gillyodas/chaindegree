@@ -34,9 +34,15 @@ Documenting the core architecture, classes, and logic of ChainDegree.
 ### Persistence & Hardening
 
 - **[ChainDegreeDbContext](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/ChainDegreeDbContext.cs)**: EF Core context.
-  - Configures dynamic query filters in `OnModelCreating`:
-    - `ISoftDeletable`: filters where `DeletedAt == null`.
-    - `IInstitutionScoped`: filters where `InstitutionId == CurrentUserAccessor.InstitutionId`.
+  - `OnModelCreating` delegates filter logic to `GlobalQueryFilterApplier` — only 3 lines: load configs, apply filters, call base.
+  - Constructor injects `ICurrentUserAccessor` and `ILogger<ChainDegreeDbContext>`.
+  - `_currentInstitutionId` field is `internal` to allow `Expression.Field` capture by `GlobalQueryFilterApplier` (same assembly).
+- **[GlobalQueryFilterApplier](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/QueryFilters/GlobalQueryFilterApplier.cs)**: Extracted filter logic. Scans entities for marker interfaces and applies `HasQueryFilter`:
+  - `ISoftDeletable` → `e.DeletedAt == null`
+  - `IInstitutionScoped` → `e.InstitutionId == dbContext._currentInstitutionId` (Expression.Field capture for live value per request)
+  - Logs each entity + filter expression, plus summary count.
+  - Guard clause: throws `InvalidOperationException` if `_currentInstitutionId` field not found.
+  - `CombineFilters` helper gộp nhiều filter bằng `AndAlso`.
 - **[AuditableEntityInterceptor](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/Interceptors/AuditableEntityInterceptor.cs)**: Sets `CreatedAt`/`CreatedBy`/`UpdatedAt`/`UpdatedBy` automatically.
 - **[SoftDeleteInterceptor](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/Interceptors/SoftDeleteInterceptor.cs)**: Intercepts `Deleted` states of `ISoftDeletable` entities and modifies them to set `DeletedAt = DateTime.UtcNow`.
 - **[UnitOfWork](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Infrastructure/Persistence/UnitOfWork.cs)**: Full transaction manager supporting implicit/explicit transactions, structured logging, safe rollbacks, and DbContext error wrapping.

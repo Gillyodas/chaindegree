@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ChainDegree.Core.Domain.Auth;
 using ChainDegree.Core.Domain.Universities;
 using ChainDegree.Core.Domain.Universities.Entities;
@@ -16,8 +14,8 @@ using ChainDegree.Core.Domain.Jobs.Entities;
 using ChainDegree.Core.Domain.Applications;
 using ChainDegree.Core.Domain.Applications.Entities;
 using ChainDegree.Core.Domain.SharedKernel;
-using ChainDegree.Core.Domain.SharedKernel.Interfaces;
 using ChainDegree.Core.Application.Abstractions.Auth;
+using ChainDegree.Core.Infrastructure.Persistence.QueryFilters;
 using DomainApplication = ChainDegree.Core.Domain.Applications.Application;
 
 namespace ChainDegree.Core.Infrastructure.Persistence
@@ -25,15 +23,24 @@ namespace ChainDegree.Core.Infrastructure.Persistence
     public class ChainDegreeDbContext : DbContext
     {
         private readonly ICurrentUserAccessor _currentUserAccessor;
-        internal readonly Guid? _currentInstitutionId; // Internal so it can be referenced in reflection/expressions if needed
+        private readonly ILogger<ChainDegreeDbContext> _logger;
+
+        // internal (không private) để GlobalQueryFilterApplier — cùng assembly —
+        // có thể build Expression.Field trỏ tới field này. Field, không phải
+        // property, vì Expression.Field cần trỏ đúng backing storage; giá trị
+        // phải được đọc LẠI mỗi lần một DbContext instance khác chạy query,
+        // không phải bị "đóng băng" tại thời điểm OnModelCreating.
+        internal readonly Guid? _currentInstitutionId;
 
         public ChainDegreeDbContext(
             DbContextOptions<ChainDegreeDbContext> options,
-            ICurrentUserAccessor currentUserAccessor)
+            ICurrentUserAccessor currentUserAccessor,
+            ILogger<ChainDegreeDbContext> logger)
             : base(options)
         {
             _currentUserAccessor = currentUserAccessor;
             _currentInstitutionId = _currentUserAccessor.InstitutionId;
+            _logger = logger;
         }
 
         public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
@@ -55,56 +62,14 @@ namespace ChainDegree.Core.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // 1. Load toàn bộ IEntityTypeConfiguration<T> trong assembly hiện tại
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChainDegreeDbContext).Assembly);
 
-            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-            {
-                var clrType = entityType.ClrType;
-
-                bool isSoftDeletable = typeof(ISoftDeletable).IsAssignableFrom(clrType);
-                bool isInstitutionScoped = typeof(IInstitutionScoped).IsAssignableFrom(clrType);
-
-                if (isSoftDeletable || isInstitutionScoped)
-                {
-                    var parameter = Expression.Parameter(clrType, "e");
-                    Expression? filter = null;
-
-                    if (isSoftDeletable)
-                    {
-                        var deletedAtProperty = Expression.Property(parameter, nameof(ISoftDeletable.DeletedAt));
-                        var nullConstant = Expression.Constant(null, typeof(DateTime?));
-                        filter = Expression.Equal(deletedAtProperty, nullConstant);
-                    }
-
-                    if (isInstitutionScoped)
-                    {
-                        var institutionIdProperty = Expression.Property(parameter, nameof(IInstitutionScoped.InstitutionId));
-                        var nullableInstitutionId = Expression.Convert(institutionIdProperty, typeof(Guid?));
-                        
-                        // Reference the DbContext field _currentInstitutionId on 'this' context
-                        var contextExpression = Expression.Constant(this);
-                        var currentInstIdField = typeof(ChainDegreeDbContext).GetField(nameof(_currentInstitutionId), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                        var capturedValue = Expression.Field(contextExpression, currentInstIdField!);
-                        
-                        var equalExpression = Expression.Equal(nullableInstitutionId, capturedValue);
-
-                        if (filter == null)
-                        {
-                            filter = equalExpression;
-                        }
-                        else
-                        {
-                            filter = Expression.AndAlso(filter, equalExpression);
-                        }
-                    }
-
-                    if (filter != null)
-                    {
-                        var lambda = Expression.Lambda(filter, parameter);
-                        modelBuilder.Entity(clrType).HasQueryFilter(lambda);
-                    }
-                }
-            }
+            // 2. Áp global query filter (soft-delete / institution scoping).
+            //    Toàn bộ logic reflection + expression-building nằm trong
+            //    GlobalQueryFilterApplier — DbContext chỉ gọi, không tự làm.
+            var filterApplier = new GlobalQueryFilterApplier(_logger);
+            filterApplier.Apply(modelBuilder, dbContextInstance: this);
 
             base.OnModelCreating(modelBuilder);
         }
