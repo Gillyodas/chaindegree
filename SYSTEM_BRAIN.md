@@ -66,6 +66,7 @@ Documenting the core architecture, classes, and logic of ChainDegree.
 ### Pipeline Behaviors
 
 - **[ValidationBehavior](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Common/Behaviors/ValidationBehavior.cs)**: MediatR open pipeline behavior that executes FluentValidation validators and returns generic error `Result` collections instead of throwing exceptions.
+- **[IProblemException](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Common/Exceptions/IProblemException.cs)**: Exception interface specifying mapped `StatusCode`, `ErrorCode`, and descriptive `Detail` for unified error handling.
 
 ---
 
@@ -75,9 +76,10 @@ Documenting the core architecture, classes, and logic of ChainDegree.
 
 - **[ChainDegreeProblemDetailsFactory](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/Filters/ChainDegreeProblemDetailsFactory.cs)**: Custom factory extending the default ASP.NET Core `ProblemDetailsFactory`. 
   - Standardizes all API error responses with a unified JSON structure.
-  - Automatically enriches responses with `traceId` (Activity tracing or HTTP TraceIdentifier), `correlationId` (from headers `X-Request-Id` or `X-Correlation-Id`), `timestamp` (UTC ISO 8601 format), and `errorCode`.
+  - Automatically enriches responses with transport metadata: `traceId` (Activity tracing or HTTP TraceIdentifier), `correlationId` (from headers `X-Request-Id` or `X-Correlation-Id`), and `timestamp` (UTC ISO 8601 format).
   - Normalizes the `type` field to point to internal documentation URIs: `https://chaindegree.io/errors/{slug}`.
-- **[ErrorTypeMap](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/Filters/ErrorTypeMap.cs)**: Static helper mapping between HTTP status codes, specific documentation slugs, and default error codes.
-- **[GlobalExceptionFilterAttribute](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/GlobalExceptionFilterAttribute.cs)**: Handles unhandled application exceptions, logging the occurrence and using `ChainDegreeProblemDetailsFactory` to create the unified error response.
+- **[ErrorTypeMap](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/Filters/ErrorTypeMap.cs)**: Static helper mapping between HTTP status codes and specific documentation slugs.
+- **[GlobalExceptionFilterAttribute](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/GlobalExceptionFilterAttribute.cs)**: Handles unhandled exceptions by pattern matching on `IProblemException` and using `ChainDegreeProblemDetailsFactory` to create the unified error response.
 - **[ApiControllerBase](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/ApiControllerBase.cs)**: Base API controller providing utility methods (`ProcessResult`, `HandleFailure`) that map domain errors to HTTP results which are then processed by the factory.
+
 
