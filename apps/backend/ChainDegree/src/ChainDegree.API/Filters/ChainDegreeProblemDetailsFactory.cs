@@ -48,7 +48,7 @@ namespace ChainDegree.API.Filters
                 problemDetails.Type = ErrorTypeMap.GetErrorUri(statusCode.Value);
             }
 
-            EnrichProblemDetails(httpContext, problemDetails);
+            EnrichProblemDetails(httpContext!, problemDetails);
 
             return problemDetails;
         }
@@ -78,7 +78,7 @@ namespace ChainDegree.API.Filters
                 Instance = instance ?? httpContext?.Request?.Path
             };
 
-            EnrichProblemDetails(httpContext, problemDetails);
+            EnrichProblemDetails(httpContext!, problemDetails);
 
             // Validation specific error code
             if (!problemDetails.Extensions.ContainsKey("errorCode"))
@@ -89,7 +89,7 @@ namespace ChainDegree.API.Filters
             return problemDetails;
         }
 
-        private void EnrichProblemDetails(HttpContext httpContext, ProblemDetails problemDetails)
+        private void EnrichProblemDetails(HttpContext? httpContext, ProblemDetails problemDetails)
         {
             if (httpContext == null) return;
 
