@@ -6,5 +6,7 @@
     <Project Path="src/ChainDegree.Infrastructure/ChainDegree.Core.Infrastructure.csproj" Id="7da8c0aa-736c-4b32-bd6a-fb5a57eff4f4" />
     <Project Path="src/ChainDegree.SharedKernel/ChainDegree.SharedKernel.csproj" Id="240fc58e-85dd-46b9-b007-27acb63aad81" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/ChainDegree.API.Tests/ChainDegree.API.Tests.csproj" />
+  </Folder>
 </Solution>
