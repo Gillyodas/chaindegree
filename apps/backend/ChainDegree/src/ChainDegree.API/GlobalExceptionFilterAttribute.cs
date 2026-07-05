@@ -25,25 +25,26 @@ public class GlobalExceptionFilterAttribute : ExceptionFilterAttribute
             "Unhandled exception in {@ControllerAction}",
             $"{context.RouteData.Values["controller"]}/{context.RouteData.Values["action"]}");
 
-        var statusCode = StatusCodes.Status500InternalServerError;
-        string? errorCode = null;
+        int statusCode;
+        string? errorCode;
+        string detail;
 
-        if (context.Exception is RepositoryConcurrencyException)
-        {
-            statusCode = StatusCodes.Status409Conflict;
-            errorCode = "CONCURRENCY_ERROR";
-        }
-        else if (context.Exception is RepositoryException)
-        {
-            statusCode = StatusCodes.Status400BadRequest;
-            errorCode = "REPOSITORY_ERROR";
-        }
-
-        var detail = context.HttpContext.RequestServices
+        var isDev = context.HttpContext.RequestServices
             .GetRequiredService<IHostEnvironment>()
-            .IsDevelopment()
-            ? context.Exception.Message
-            : "An unexpected error occurred";
+            .IsDevelopment();
+
+        if (context.Exception is IProblemException problemException)
+        {
+            statusCode = problemException.StatusCode;
+            errorCode = problemException.ErrorCode;
+            detail = isDev ? context.Exception.Message : problemException.Detail;
+        }
+        else
+        {
+            statusCode = StatusCodes.Status500InternalServerError;
+            errorCode = null;
+            detail = isDev ? context.Exception.Message : "An unexpected error occurred";
+        }
 
         var problem = _problemDetailsFactory.CreateProblemDetails(
             context.HttpContext,
