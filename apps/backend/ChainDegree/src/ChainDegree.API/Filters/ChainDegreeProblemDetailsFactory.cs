@@ -118,12 +118,6 @@ namespace ChainDegree.API.Filters
             {
                 problemDetails.Extensions["correlationId"] = correlationId;
             }
-
-            // Default errorCode based on Status Code if not already present
-            if (!problemDetails.Extensions.ContainsKey("errorCode"))
-            {
-                problemDetails.Extensions["errorCode"] = ErrorTypeMap.GetDefaultErrorCode(problemDetails.Status ?? 500);
-            }
         }
     }
 }
