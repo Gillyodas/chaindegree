@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using FluentValidation;
@@ -9,11 +9,15 @@ namespace ChainDegree.Core.Application.Degrees.Commands.IssueDegree
     {
         public IssueDegreeCommandValidator()
         {
-            RuleFor(x => x.InstitutionId).NotEmpty().WithMessage("Institution id is required.");
-            RuleFor(x => x.SignedByRegistrarId).NotEmpty().WithMessage("Signed by registrar id is required.");
-            RuleFor(x => x.StudentId).NotEmpty().WithMessage("Student id is required.");
-            RuleFor(x => x.Major).NotEmpty().WithMessage("Major is required.");
-            RuleFor(x => x.Classification).NotEmpty().WithMessage("Classification is required.");
+            RuleFor(x => x.Degrees).NotEmpty().WithMessage("Degrees list cannot be empty.");
+            
+            RuleForEach(x => x.Degrees).ChildRules(degree =>
+            {
+                degree.RuleFor(d => d.StudentId).NotEmpty().WithMessage("Student id is required.");
+                degree.RuleFor(d => d.Major).NotEmpty().WithMessage("Major is required.");
+                degree.RuleFor(d => d.Classification).NotEmpty().WithMessage("Classification is required.");
+                degree.RuleFor(d => d.IssuedAt).NotEmpty().WithMessage("Issued date is required.");
+            });
         }
     }
 }

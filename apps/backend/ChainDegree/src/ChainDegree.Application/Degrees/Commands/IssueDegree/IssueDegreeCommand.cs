@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using ChainDegree.Core.Domain.Degrees;
@@ -8,10 +8,6 @@ using MediatR;
 namespace ChainDegree.Core.Application.Degrees.Commands.IssueDegree
 {
     public sealed record IssueDegreeCommand(
-        Guid InstitutionId,
-        Guid SignedByRegistrarId,
-        Guid StudentId,
-        string Major,
-        string Classification
-    ) : IRequest<Result<Degree>>;
+        List<IssueDegreeItemDto> Degrees
+    ) : IRequest<Result<IssueDegreeResponse>>;
 }

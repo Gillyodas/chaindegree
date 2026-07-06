@@ -19,6 +19,9 @@ namespace ChainDegree.Core.Application
                 cfg.AddOpenBehavior(typeof(ValidationBehavior<,>));
             });
 
+            // Register Application services
+            services.AddScoped<Abstractions.Services.IDegreeIssuanceService, Services.DegreeIssuanceService>();
+
             return services;
         }
     }
