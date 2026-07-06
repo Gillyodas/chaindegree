@@ -18,9 +18,9 @@ $$DataHashLocal = \text{SHA-256}(PlainDataCanonical \parallel Salt)$$
 
 *Ví dụ minh họa luồng xử lý chuỗi:*
 
-* `PlainDataCanonical`: `{"classification":"Gioi","degreeCode":"DEG-2026-99102","major":"Software Engineering","studentCode":"STU-88291"}`
+* `PlainDataCanonical`: `{"classification":"Gioi","degreeCode":"DEG-2026-000001","issuedAt":"2026-06-15T08:00:00Z","major":"Software Engineering","studentId":"550e8400-e29b-41d4-a716-446655440000"}`
 * `Salt`: `a7d83bf92c81e3d0`
-* Chuỗi kết hợp trước khi đưa vào hàm băm: `{"classification":"Gioi","degreeCode":"DEG-2026-99102","major":"Software Engineering","studentCode":"STU-88291"}a7d83bf92c81e3d0`
+* Chuỗi kết hợp trước khi đưa vào hàm băm: `{"classification":"Gioi","degreeCode":"DEG-2026-000001","issuedAt":"2026-06-15T08:00:00Z","major":"Software Engineering","studentId":"550e8400-e29b-41d4-a716-446655440000"}a7d83bf92c81e3d0`
 
 ### B. Quy trình đối chiếu chéo tại US-3 (Dual-Verification Pipeline)
 

@@ -16,6 +16,7 @@ using ChainDegree.Core.Domain.Applications.Entities;
 using ChainDegree.Core.Domain.SharedKernel;
 using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Infrastructure.Persistence.QueryFilters;
+using ChainDegree.Core.Infrastructure.Persistence.Entities;
 using DomainApplication = ChainDegree.Core.Domain.Applications.Application;
 
 namespace ChainDegree.Core.Infrastructure.Persistence
@@ -59,6 +60,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence
         public DbSet<ApplicationAttachedDegree> ApplicationAttachedDegrees => Set<ApplicationAttachedDegree>();
         public DbSet<BehaviorLog> BehaviorLogs => Set<BehaviorLog>();
         public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+        public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
