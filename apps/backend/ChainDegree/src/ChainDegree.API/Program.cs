@@ -57,6 +57,8 @@ namespace ChainDegree.API
 
             var app = builder.Build();
 
+            app.UseMiddleware<ChainDegree.API.Middleware.CorrelationIdMiddleware>();
+
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
