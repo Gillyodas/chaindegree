@@ -10,6 +10,7 @@ namespace ChainDegree.Core.Application.Abstractions.Repositories
     {
         Task<Degree?> GetByIdAsync(Guid id, CancellationToken ct = default);
         Task<bool> ExistsDuplicateAsync(Guid institutionId, Guid studentId, string major, CancellationToken ct = default);
+        Task<bool> ExistsDuplicatePolicyAsync(Guid institutionId, Guid studentId, string major, int issuedYear, CancellationToken ct = default);
         Task<long> GetTotalCountAsync(CancellationToken ct = default);
         Task AddAsync(Degree degree, CancellationToken ct = default);
         Task AddRangeAsync(IEnumerable<Degree> degrees, CancellationToken ct = default);

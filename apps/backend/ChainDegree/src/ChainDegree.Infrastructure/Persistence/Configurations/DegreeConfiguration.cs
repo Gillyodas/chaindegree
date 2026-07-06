@@ -49,6 +49,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.IssuedAt).IsRequired();
 
+            builder.Property(x => x.RowVersion).IsRowVersion();
+
             builder.HasOne<EducationInstitution>()
                    .WithMany()
                    .HasForeignKey(x => x.InstitutionId)

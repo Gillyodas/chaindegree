@@ -61,6 +61,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence
         public DbSet<BehaviorLog> BehaviorLogs => Set<BehaviorLog>();
         public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
         public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+        public DbSet<DegreeProcessingRecord> DegreeProcessingRecords => Set<DegreeProcessingRecord>();
+        public DbSet<BatchRecord> BatchRecords => Set<BatchRecord>();
+        public DbSet<BatchDegreeRecord> BatchDegreeRecords => Set<BatchDegreeRecord>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

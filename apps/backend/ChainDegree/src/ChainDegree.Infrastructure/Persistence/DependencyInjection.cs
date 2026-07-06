@@ -5,6 +5,11 @@ using ChainDegree.Core.Infrastructure.Persistence.Outbox;
 using ChainDegree.Core.Infrastructure.Configurations;
 using ChainDegree.Core.Infrastructure.Auth;
 using ChainDegree.Core.Infrastructure.Services;
+using ChainDegree.Core.Infrastructure.Persistence.Locking;
+using ChainDegree.Core.Infrastructure.Persistence.Repositories;
+using ChainDegree.Core.Application.Abstractions.Repositories;
+using ChainDegree.Core.Domain.Degrees.Interfaces;
+using ChainDegree.Core.Infrastructure.Cryptography.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +29,11 @@ namespace ChainDegree.Core.Infrastructure.Persistence
 
             // Register services
             services.AddScoped<IBehaviorLogService, BehaviorLogService>();
+            services.AddSingleton<IJsonCanonicalizer, JsonCanonicalizer>();
+            services.AddSingleton<IHashService, Sha256HashService>();
+            services.AddScoped<IPendingDegreeLockStrategy, SqlServerPendingDegreeLockStrategy>();
+            services.AddScoped<IDegreeRepository, DegreeRepository>();
+            services.AddScoped<Core.Application.Abstractions.Queries.IBatchQueryService, BatchTrackingService>();
 
             // Register configurations
             services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));

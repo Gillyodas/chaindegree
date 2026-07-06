@@ -21,6 +21,7 @@ namespace ChainDegree.Core.Application
 
             // Register Application services
             services.AddScoped<Abstractions.Services.IDegreeIssuanceService, Services.DegreeIssuanceService>();
+            services.AddScoped<Abstractions.Policies.IDegreeDuplicatePolicy, Policies.DegreeDuplicatePolicy>();
 
             return services;
         }
