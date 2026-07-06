@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using ChainDegree.SharedKernel.Common.Error;
@@ -27,5 +27,20 @@ namespace ChainDegree.SharedKernel.DomainErrors.Degrees.Degree
 
         public static readonly Error InvalidStateTransition =
             Error.Validation("Degree.InvalidStateTransition", "The degree cannot transition from its current state under this operation.");
+
+        public static readonly Error DuplicateDegree =
+            Error.Conflict("Degree.DuplicateDegree", "A degree of the same type already exists for this student at this institution.");
+
+        public static readonly Error StudentNotFound =
+            Error.NotFound("Degree.StudentNotFound", "The specified student was not found.");
+
+        public static readonly Error NoDegreeToIssue =
+            Error.Validation("Degree.NoDegreeToIssue", "No valid degrees to issue after validation.");
+
+        public static readonly Error BatchNotFound =
+            Error.NotFound("Degree.BatchNotFound", "The specified batch was not found.");
+
+        public static readonly Error CannotRetry =
+            Error.Validation("Degree.CannotRetry", "Only degrees with Confirmation_Error status can be retried.");
     }
 }

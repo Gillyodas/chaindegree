@@ -8,5 +8,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ChainDegree.API.Tests/ChainDegree.API.Tests.csproj" />
+    <Project Path="tests/ChainDegree.Domain.Tests/ChainDegree.Domain.Tests.csproj" />
   </Folder>
 </Solution>

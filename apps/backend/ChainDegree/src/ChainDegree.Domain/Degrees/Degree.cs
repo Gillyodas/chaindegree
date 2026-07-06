@@ -21,6 +21,7 @@ namespace ChainDegree.Core.Domain.Degrees
         public StatusEnum Status { get; private set; }
         public string? TxHashBlockchain { get; private set; }
         public DateTime IssuedAt { get; private set; }
+        public byte[] RowVersion { get; private set; } = null!;
 
         // Constructor phục vụ tạo mới thực thể
         private Degree(
@@ -184,6 +185,20 @@ namespace ChainDegree.Core.Domain.Degrees
                 Status = StatusEnum.Confirmation_Error;
                 UpdatedAt = DateTime.UtcNow;
             }
+        }
+
+        /// <summary>
+        /// Chuyển degree từ Confirmation_Error → Pending_Confirmation để requeue cho worker gom lô lại
+        /// </summary>
+        public Result MarkReadyForRetry()
+        {
+            if (Status != StatusEnum.Confirmation_Error)
+                return Result.Failure(DegreeErrors.InvalidStateTransition);
+
+            Status = StatusEnum.Pending_Confirmation;
+            UpdatedAt = DateTime.UtcNow;
+
+            return Result.Success();
         }
     }
 }

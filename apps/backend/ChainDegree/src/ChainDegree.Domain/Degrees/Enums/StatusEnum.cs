@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -11,6 +11,7 @@ namespace ChainDegree.Core.Domain.Degrees.Enums
         Confirmation_Error,   // Quá trình xử lý ngầm lên chuỗi gặp lỗi (Sẵn sàng để Retry)
         Pending_Update,       // Văn bằng đang trong quá trình cập nhật bất đồng bộ dữ liệu chuỗi
         Pending_Revocation,   // Văn bằng đang trong quá trình thu hồi bất đồng bộ trên chuỗi
-        Revoked               // Văn bằng đã bị hủy bỏ/thu hồi hoàn toàn hiệu lực pháp lý
+        Revoked,               // Văn bằng đã bị hủy bỏ/thu hồi hoàn toàn hiệu lực pháp lý
+        Frozen                // Cơ sở giáo dục bị đóng băng uy tín (Reputation Engine - Phase 5)
     }
 }

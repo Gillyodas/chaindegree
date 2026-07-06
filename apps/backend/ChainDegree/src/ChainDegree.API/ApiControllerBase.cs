@@ -5,7 +5,7 @@ using ChainDegree.SharedKernel.Result;
 using ChainDegree.SharedKernel.Common.Error;
 using Microsoft.AspNetCore.Http;
 
-namespace ChainDegree.Core.API
+namespace ChainDegree.API
 {
     [ApiController]
     public abstract class ApiControllerBase : ControllerBase
