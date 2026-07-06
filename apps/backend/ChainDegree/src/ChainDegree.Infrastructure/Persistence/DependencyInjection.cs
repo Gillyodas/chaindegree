@@ -10,6 +10,8 @@ using ChainDegree.Core.Infrastructure.Persistence.Repositories;
 using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Domain.Degrees.Interfaces;
 using ChainDegree.Core.Application.Abstractions.Crypto;
+using ChainDegree.Core.Application.Abstractions.Blockchain;
+using ChainDegree.Core.Infrastructure.Blockchain;
 using ChainDegree.Core.Infrastructure.Cryptography.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,12 +38,16 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddScoped<IPendingDegreeLockStrategy, SqlServerPendingDegreeLockStrategy>();
             services.AddScoped<IDegreeRepository, DegreeRepository>();
             services.AddScoped<Core.Application.Abstractions.Queries.IBatchQueryService, BatchTrackingService>();
+            services.AddScoped<IBlockchainService, NethereumBlockchainService>();
 
             // Register configurations
             services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
+            services.Configure<BesuOptions>(configuration.GetSection(BesuOptions.SectionName));
+            services.Configure<BatchingWorkerOptions>(configuration.GetSection(BatchingWorkerOptions.SectionName));
 
             // Register background workers
             services.AddHostedService<OutboxProcessor>();
+            services.AddHostedService<BackgroundWorkers.BatchingDegreeWorker>();
 
             // Register interceptors
             services.AddScoped<AuditableEntityInterceptor>();

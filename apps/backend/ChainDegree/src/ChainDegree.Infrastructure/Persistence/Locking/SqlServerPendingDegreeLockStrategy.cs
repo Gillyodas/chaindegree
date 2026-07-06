@@ -14,13 +14,16 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Locking
             CancellationToken ct = default)
         {
             var query = @"
-                SELECT TOP ({0}) *
-                FROM DEGREES WITH (UPDLOCK, READPAST, ROWLOCK)
-                WHERE Status = 'Pending_Confirmation' AND DeletedAt IS NULL
-                ORDER BY CreatedAt";
+                SELECT TOP ({0}) d.*
+                FROM DEGREES d WITH (UPDLOCK, READPAST, ROWLOCK)
+                LEFT JOIN DEGREE_PROCESSING_RECORDS pr ON d.Id = pr.DegreeId
+                WHERE (d.Status = 'Pending_Confirmation' 
+                       OR (d.Status = 'Confirmation_Error' AND pr.NextRetryAt IS NOT NULL AND pr.NextRetryAt <= {1}))
+                  AND d.DeletedAt IS NULL
+                ORDER BY d.CreatedAt";
 
             return await dbContext.Degrees
-                .FromSqlRaw(query, batchSize)
+                .FromSqlRaw(query, batchSize, System.DateTime.UtcNow)
                 .ToListAsync(ct);
         }
     }
