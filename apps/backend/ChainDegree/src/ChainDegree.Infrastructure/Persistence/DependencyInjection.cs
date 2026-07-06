@@ -9,6 +9,7 @@ using ChainDegree.Core.Infrastructure.Persistence.Locking;
 using ChainDegree.Core.Infrastructure.Persistence.Repositories;
 using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Domain.Degrees.Interfaces;
+using ChainDegree.Core.Application.Abstractions.Crypto;
 using ChainDegree.Core.Infrastructure.Cryptography.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddScoped<IBehaviorLogService, BehaviorLogService>();
             services.AddSingleton<IJsonCanonicalizer, JsonCanonicalizer>();
             services.AddSingleton<IHashService, Sha256HashService>();
+            services.AddSingleton<IMerkleTreeService, MerkleTreeService>();
             services.AddScoped<IPendingDegreeLockStrategy, SqlServerPendingDegreeLockStrategy>();
             services.AddScoped<IDegreeRepository, DegreeRepository>();
             services.AddScoped<Core.Application.Abstractions.Queries.IBatchQueryService, BatchTrackingService>();

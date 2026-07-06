@@ -10,5 +10,6 @@
     <Project Path="tests/ChainDegree.API.Tests/ChainDegree.API.Tests.csproj" />
     <Project Path="tests/ChainDegree.Domain.Tests/ChainDegree.Domain.Tests.csproj" />
     <Project Path="tests/ChainDegree.Application.Tests/ChainDegree.Application.Tests.csproj" />
+    <Project Path="tests/ChainDegree.Infrastructure.Tests/ChainDegree.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
