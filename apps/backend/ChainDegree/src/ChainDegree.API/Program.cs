@@ -1,9 +1,10 @@
+using ChainDegree.API.Filters;
 using ChainDegree.Core.Application;
+using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Infrastructure.Configurations;
 using ChainDegree.Core.Infrastructure.Persistence;
-using ChainDegree.Core.Application.Abstractions.Auth;
-using ChainDegree.API.Filters;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Scalar.AspNetCore;
 
 namespace ChainDegree.API
 {
@@ -63,6 +64,11 @@ namespace ChainDegree.API
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+
+                app.MapScalarApiReference(options =>
+                {
+                    options.Title = "ChainDegree API";
+                });
             }
 
             app.UseHttpsRedirection();
