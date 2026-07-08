@@ -15,11 +15,16 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
             
             builder.Property(x => x.DegreeId).ValueGeneratedNever();
 
+            builder.Property(x => x.ActionType).IsRequired().HasMaxLength(50);
+            builder.Property(x => x.State).IsRequired().HasMaxLength(50);
             builder.Property(x => x.RetryCount).IsRequired().HasDefaultValue(0);
             builder.Property(x => x.NextRetryAt);
             builder.Property(x => x.LastRetryAt);
             builder.Property(x => x.LeaseUntil);
             builder.Property(x => x.WorkerId).HasMaxLength(100);
+            builder.Property(x => x.LastError).HasMaxLength(4000);
+            builder.Property(x => x.BlockchainTxHash).HasMaxLength(150);
+            builder.Property(x => x.CorrelationId).HasMaxLength(150);
 
             // Setup relationship to Degree
             builder.HasOne<Degree>()

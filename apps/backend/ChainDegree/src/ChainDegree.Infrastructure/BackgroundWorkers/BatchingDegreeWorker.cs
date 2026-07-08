@@ -7,6 +7,7 @@ using ChainDegree.Core.Application.Abstractions.Blockchain;
 using ChainDegree.Core.Application.Abstractions.Crypto;
 using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Domain.Degrees;
+using ChainDegree.Core.Domain.Degrees.Entities;
 using ChainDegree.Core.Domain.Degrees.Enums;
 using ChainDegree.Core.Infrastructure.Configurations;
 using ChainDegree.Core.Infrastructure.Persistence;
@@ -57,51 +58,91 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 
         private async Task ProcessBatchAsync(CancellationToken ct)
         {
+            var workerId = Guid.NewGuid().ToString();
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ChainDegreeDbContext>();
             var degreeRepo = scope.ServiceProvider.GetRequiredService<IDegreeRepository>();
             var merkleTreeService = scope.ServiceProvider.GetRequiredService<IMerkleTreeService>();
             var blockchainService = scope.ServiceProvider.GetRequiredService<IBlockchainService>();
 
-            // 1. Begin database transaction (Transaction Boundary 2)
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
-
-            var lockedDegrees = await degreeRepo.GetPendingConfirmationAsync(_options.MaxBatchSize, ct);
-            if (lockedDegrees.Count == 0)
+            // 1. Begin DB transaction to claim records atomically
+            await using (var claimTransaction = await dbContext.Database.BeginTransactionAsync(ct))
             {
-                await transaction.RollbackAsync(ct);
-                return;
+                var lockedDegrees = await degreeRepo.GetPendingConfirmationAsync(_options.MaxBatchSize, ct);
+                if (lockedDegrees.Count == 0)
+                {
+                    await claimTransaction.RollbackAsync(ct);
+                    return;
+                }
+
+                // Check dual trigger conditions
+                var oldestDegree = lockedDegrees.Min(d => d.CreatedAt);
+                var waitTimeSeconds = (DateTime.UtcNow - oldestDegree).TotalSeconds;
+                var isTriggered = lockedDegrees.Count >= _options.MaxBatchSize || waitTimeSeconds >= _options.MaxWaitTimeSeconds;
+
+                if (!isTriggered)
+                {
+                    await claimTransaction.RollbackAsync(ct);
+                    return;
+                }
+
+                _logger.LogInformation("[{LogCode}] Claiming queued records. DegreesCount={Count}, WaitTime={WaitTime}s",
+                    DegreeLogs.Degree_BlockchainSyncStarted.Code,
+                    lockedDegrees.Count,
+                    waitTimeSeconds);
+
+                // Transition states in DegreeProcessingRecords to Processing (Claiming them)
+                foreach (var degree in lockedDegrees)
+                {
+                    var pr = await dbContext.DegreeProcessingRecords.FindAsync(degree.Id);
+                    if (pr == null)
+                    {
+                        pr = new DegreeProcessingRecord
+                        {
+                            DegreeId = degree.Id,
+                            ActionType = degree.Status switch
+                            {
+                                StatusEnum.Pending_Update => "Update",
+                                StatusEnum.Pending_Revocation => "Revoke",
+                                _ => "Issue"
+                            },
+                            State = "Queued",
+                            RetryCount = 0
+                        };
+                        dbContext.DegreeProcessingRecords.Add(pr);
+                    }
+
+                    pr.State = "Processing";
+                    pr.WorkerId = workerId;
+                    pr.LeaseUntil = DateTime.UtcNow.AddMinutes(10);
+                }
+
+                await dbContext.SaveChangesAsync(ct);
+                await claimTransaction.CommitAsync(ct);
             }
 
-            // Check dual trigger conditions
-            var oldestDegree = lockedDegrees.Min(d => d.CreatedAt);
-            var waitTimeSeconds = (DateTime.UtcNow - oldestDegree).TotalSeconds;
-            var isTriggered = lockedDegrees.Count >= _options.MaxBatchSize || waitTimeSeconds >= _options.MaxWaitTimeSeconds;
+            // 2. Process batches per institution (outside database lock holding)
+            var claimedDegrees = await dbContext.Degrees
+                .Include(d => d.CryptoData)
+                .Join(dbContext.DegreeProcessingRecords,
+                    d => d.Id,
+                    pr => pr.DegreeId,
+                    (d, pr) => new { Degree = d, Record = pr })
+                .Where(x => x.Record.WorkerId == workerId && x.Record.State == "Processing")
+                .ToListAsync(ct);
 
-            if (!isTriggered)
-            {
-                // Rollback transaction to release locked rows immediately
-                await transaction.RollbackAsync(ct);
-                return;
-            }
+            if (claimedDegrees.Count == 0) return;
 
-            _logger.LogInformation("[{LogCode}] Dual trigger met. DegreesCount={Count}, WaitTime={WaitTime}s",
-                DegreeLogs.Degree_BlockchainSyncStarted.Code,
-                lockedDegrees.Count,
-                waitTimeSeconds);
-
-            // Group degrees by InstitutionId to process separate batches per institution
-            var groups = lockedDegrees.GroupBy(d => d.InstitutionId).ToList();
+            var groups = claimedDegrees.GroupBy(x => x.Degree.InstitutionId).ToList();
 
             foreach (var group in groups)
             {
                 var institutionId = group.Key;
-                var institutionDegrees = group.ToList();
+                var institutionItems = group.ToList();
+                var institutionDegrees = institutionItems.Select(x => x.Degree).ToList();
 
-                // Fetch institution code for batch name generation
                 var institution = await dbContext.EducationInstitutions
                     .FirstOrDefaultAsync(x => x.Id == institutionId, ct);
-                
                 var instCode = institution?.Code ?? "UNKNOWN";
                 var batchId = Guid.NewGuid();
                 var shortGuid = Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -121,103 +162,153 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 dbContext.BatchRecords.Add(batchRecord);
                 await dbContext.SaveChangesAsync(ct);
 
-                // Build Merkle Tree from the leaf hashes
-                var leafHashes = institutionDegrees.Select(d => d.CryptoData.DataHashLocal).ToList();
-                var treeResult = merkleTreeService.BuildTree(leafHashes);
+                // Build leaf hashes taking updates into account
+                var leafHashes = new List<string>();
+                foreach (var item in institutionItems)
+                {
+                    if (item.Record.ActionType == "Update")
+                    {
+                        var staging = await dbContext.DegreeUpdateRequests.FirstOrDefaultAsync(x => x.DegreeId == item.Degree.Id, ct);
+                        leafHashes.Add(staging?.CryptoData.DataHashLocal ?? item.Degree.CryptoData.DataHashLocal);
+                    }
+                    else
+                    {
+                        leafHashes.Add(item.Degree.CryptoData.DataHashLocal);
+                    }
+                }
 
-                // Anchor Merkle root to blockchain
+                var treeResult = merkleTreeService.BuildTree(leafHashes);
                 var txResult = await blockchainService.AnchorMerkleRootAsync(treeResult.MerkleRoot, batchId, ct);
 
-                if (txResult.IsSuccess)
+                await using var saveTransaction = await dbContext.Database.BeginTransactionAsync(ct);
+                try
                 {
-                    batchRecord.Status = "Completed";
-                    batchRecord.MerkleRoot = treeResult.MerkleRoot;
-                    batchRecord.TxHash = txResult.TxHash;
-                    batchRecord.BlockNumber = txResult.BlockNumber;
-                    batchRecord.CompletedAt = DateTime.UtcNow;
-
-                    // Update degrees to Confirmed
-                    foreach (var degree in institutionDegrees)
+                    if (txResult.IsSuccess)
                     {
-                        degree.ConfirmBlockchainSync(txResult.TxHash!);
+                        batchRecord.Status = "Completed";
+                        batchRecord.MerkleRoot = treeResult.MerkleRoot;
+                        batchRecord.TxHash = txResult.TxHash;
+                        batchRecord.BlockNumber = txResult.BlockNumber;
+                        batchRecord.CompletedAt = DateTime.UtcNow;
 
-                        // Cleanup processing record if exists
-                        var processingRecord = await dbContext.DegreeProcessingRecords.FindAsync(degree.Id);
-                        if (processingRecord != null)
+                        // Atomic Transaction Workflow
+                        for (int i = 0; i < institutionItems.Count; i++)
                         {
-                            dbContext.DegreeProcessingRecords.Remove(processingRecord);
-                        }
-                    }
+                            var item = institutionItems[i];
+                            var degree = item.Degree;
+                            var record = item.Record;
 
-                    // Save Merkle Proofs for each degree
-                    foreach (var proof in treeResult.Proofs)
-                    {
-                        var degree = institutionDegrees[proof.LeafIndex];
-                        var proofRecord = new BatchDegreeRecord
-                        {
-                            BatchId = batchId,
-                            DegreeId = degree.Id,
-                            LeafIndex = proof.LeafIndex,
-                            ProofHashesJson = System.Text.Json.JsonSerializer.Serialize(proof.ProofHashes)
-                        };
-                        dbContext.BatchDegreeRecords.Add(proofRecord);
-                    }
-
-                    _logger.LogInformation("[{LogCode}] {Message}. BatchName={BatchName}, TxHash={TxHash}",
-                        DegreeLogs.Degree_BlockchainSyncCompleted.Code,
-                        DegreeLogs.Degree_BlockchainSyncCompleted.Message,
-                        batchName,
-                        txResult.TxHash);
-                }
-                else
-                {
-                    batchRecord.Status = "Failed";
-                    batchRecord.FailureReason = txResult.ErrorMessage;
-                    batchRecord.CompletedAt = DateTime.UtcNow;
-
-                    // Update degrees to error state and manage retry metadata
-                    foreach (var degree in institutionDegrees)
-                    {
-                        degree.MarkAsSyncError();
-
-                        var processingRecord = await dbContext.DegreeProcessingRecords.FindAsync(degree.Id);
-                        if (processingRecord == null)
-                        {
-                            processingRecord = new DegreeProcessingRecord
+                            if (record.ActionType == "Update")
                             {
+                                var staging = await dbContext.DegreeUpdateRequests.FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+                                if (staging != null)
+                                {
+                                    // 1. Insert DegreeVersion (Lưu bản cũ)
+                                    var previousVersion = DegreeVersion.Create(
+                                        degree.Id,
+                                        degree.CurrentVersion,
+                                        degree.CryptoData.DataHashLocal,
+                                        staging.CryptoData.DataHashLocal,
+                                        degree.TxHashBlockchain ?? txResult.TxHash!,
+                                        degree.UpdatedAt
+                                    );
+                                    dbContext.DegreeVersions.Add(previousVersion);
+
+                                    // 2. Update Degree (Version mới)
+                                    degree.ConfirmUpdate(staging.Major, staging.Classification, staging.CryptoData, txResult.TxHash!);
+
+                                    // 3. Delete staging model
+                                    dbContext.DegreeUpdateRequests.Remove(staging);
+                                }
+                            }
+                            else if (record.ActionType == "Revoke")
+                            {
+                                degree.ConfirmRevocation(txResult.TxHash!);
+                            }
+                            else
+                            {
+                                degree.ConfirmBlockchainSync(txResult.TxHash!);
+                            }
+
+                            dbContext.DegreeProcessingRecords.Remove(record);
+                        }
+
+                        // Save Merkle Proofs for each degree
+                        foreach (var proof in treeResult.Proofs)
+                        {
+                            var degree = institutionDegrees[proof.LeafIndex];
+                            var proofRecord = new BatchDegreeRecord
+                            {
+                                BatchId = batchId,
                                 DegreeId = degree.Id,
-                                RetryCount = 0
+                                LeafIndex = proof.LeafIndex,
+                                ProofHashesJson = System.Text.Json.JsonSerializer.Serialize(proof.ProofHashes)
                             };
-                            dbContext.DegreeProcessingRecords.Add(processingRecord);
+                            dbContext.BatchDegreeRecords.Add(proofRecord);
                         }
 
-                        processingRecord.RetryCount++;
-                        processingRecord.LastRetryAt = DateTime.UtcNow;
+                        _logger.LogInformation("[{LogCode}] {Message}. BatchName={BatchName}, TxHash={TxHash}",
+                            DegreeLogs.Degree_BlockchainSyncCompleted.Code,
+                            DegreeLogs.Degree_BlockchainSyncCompleted.Message,
+                            batchName,
+                            txResult.TxHash);
+                    }
+                    else
+                    {
+                        batchRecord.Status = "Failed";
+                        batchRecord.FailureReason = txResult.ErrorMessage;
+                        batchRecord.CompletedAt = DateTime.UtcNow;
 
-                        if (processingRecord.RetryCount > 3)
+                        // Manage failure and retries
+                        foreach (var item in institutionItems)
                         {
-                            // Permanently fail, do not schedule next retry
-                            processingRecord.NextRetryAt = null;
-                            _logger.LogError("Degree {Id} has failed syncing after 3 attempts.", degree.Id);
+                            var degree = item.Degree;
+                            var record = item.Record;
+
+                            record.RetryCount++;
+                            record.LastRetryAt = DateTime.UtcNow;
+                            record.LastError = txResult.ErrorMessage;
+
+                            if (record.RetryCount > 3)
+                            {
+                                record.State = "Failed";
+                                record.NextRetryAt = null;
+                                
+                                if (record.ActionType == "Issue")
+                                {
+                                    degree.MarkAsSyncError();
+                                }
+                                _logger.LogError("Degree action {Action} for {Id} permanently failed after 3 retries.", record.ActionType, degree.Id);
+                            }
+                            else
+                            {
+                                record.State = "Failed";
+                                var waitMinutes = Math.Pow(2, record.RetryCount);
+                                record.NextRetryAt = DateTime.UtcNow.AddMinutes(waitMinutes);
+                                if (record.ActionType == "Issue")
+                                {
+                                    degree.MarkAsSyncError();
+                                }
+                            }
                         }
-                        else
-                        {
-                            // Exponential backoff retry scheduling: 2, 4, 8 minutes
-                            var waitMinutes = Math.Pow(2, processingRecord.RetryCount);
-                            processingRecord.NextRetryAt = DateTime.UtcNow.AddMinutes(waitMinutes);
-                        }
+
+                        _logger.LogError("[{LogCode}] {Message}. BatchName={BatchName}, Error={Error}",
+                            DegreeLogs.Degree_BlockchainSyncFailed.Code,
+                            DegreeLogs.Degree_BlockchainSyncFailed.Message,
+                            batchName,
+                            txResult.ErrorMessage);
                     }
 
-                    _logger.LogError("[{LogCode}] {Message}. BatchName={BatchName}, Error={Error}",
-                        DegreeLogs.Degree_BlockchainSyncFailed.Code,
-                        DegreeLogs.Degree_BlockchainSyncFailed.Message,
-                        batchName,
-                        txResult.ErrorMessage);
+                    await dbContext.SaveChangesAsync(ct);
+                    await saveTransaction.CommitAsync(ct);
+                }
+                catch (Exception ex)
+                {
+                    await saveTransaction.RollbackAsync(ct);
+                    _logger.LogError(ex, "Failed to persist batch execution results for batch {BatchName}", batchName);
+                    throw;
                 }
             }
-
-            await dbContext.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
         }
     }
 }

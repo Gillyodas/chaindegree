@@ -16,9 +16,11 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Locking
             var query = @"
                 SELECT TOP ({0}) d.*
                 FROM DEGREES d WITH (UPDLOCK, READPAST, ROWLOCK)
-                LEFT JOIN DEGREE_PROCESSING_RECORDS pr ON d.Id = pr.DegreeId
-                WHERE (d.Status = 'Pending_Confirmation' 
-                       OR (d.Status = 'Confirmation_Error' AND pr.NextRetryAt IS NOT NULL AND pr.NextRetryAt <= {1}))
+                LEFT JOIN DEGREE_PROCESSING_RECORDS pr WITH (UPDLOCK, READPAST, ROWLOCK) ON d.Id = pr.DegreeId
+                WHERE (pr.DegreeId IS NULL 
+                       OR pr.State = 'Queued' 
+                       OR (pr.State = 'Failed' AND pr.NextRetryAt IS NOT NULL AND pr.NextRetryAt <= {1}))
+                  AND (d.Status = 'Pending_Confirmation' OR d.Status = 'Confirmation_Error' OR d.Status = 'Pending_Update' OR d.Status = 'Pending_Revocation')
                   AND d.DeletedAt IS NULL
                 ORDER BY d.CreatedAt";
 

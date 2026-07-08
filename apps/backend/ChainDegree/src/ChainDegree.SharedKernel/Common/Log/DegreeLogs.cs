@@ -33,5 +33,17 @@ namespace ChainDegree.SharedKernel.Common.Log
 
         public static readonly LogCode Degree_RetryInitiated =
             new("Degree.RetryInitiated", "Retry initiated for degree with confirmation error.");
+ 
+        public static readonly LogCode Degree_UpdateInitiated =
+            new("Degree.UpdateInitiated", "Degree update process has started.");
+ 
+        public static readonly LogCode Degree_UpdateCompleted =
+            new("Degree.UpdateCompleted", "Degree update completed successfully.");
+ 
+        public static readonly LogCode Degree_RevocationInitiated =
+            new("Degree.RevocationInitiated", "Degree revocation process has started.");
+ 
+        public static readonly LogCode Degree_RevocationCompleted =
+            new("Degree.RevocationCompleted", "Degree revocation completed successfully.");
     }
 }

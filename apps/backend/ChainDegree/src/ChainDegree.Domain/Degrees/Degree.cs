@@ -20,6 +20,7 @@ namespace ChainDegree.Core.Domain.Degrees
         public CryptoSnapshot CryptoData { get; private set; } = null!;
         public StatusEnum Status { get; private set; }
         public string? TxHashBlockchain { get; private set; }
+        public int CurrentVersion { get; private set; }
         public DateTime IssuedAt { get; private set; }
         public byte[] RowVersion { get; private set; } = null!;
 
@@ -44,6 +45,7 @@ namespace ChainDegree.Core.Domain.Degrees
             CryptoData = cryptoData;
             Status = StatusEnum.Pending_Confirmation; // Mặc định khi tạo mới là chờ gom lô lên chuỗi
             IssuedAt = DateTime.UtcNow;
+            CurrentVersion = 1;
         }
 
         private Degree() { }
@@ -96,13 +98,34 @@ namespace ChainDegree.Core.Domain.Degrees
             return Result<Degree>.Success(newDegree);
         }
 
-        public Result UpdateAcademicDetails(
-            string newMajor,
-            string newClassification,
-            CryptoSnapshot newCryptoData)
+        /// <summary>
+        /// Kích hoạt tiến trình yêu cầu cập nhật văn bằng đích danh bất đồng bộ (US-2 - Kịch bản bằng đã lên chuỗi)
+        /// </summary>
+        public Result InitiateUpdate(string newHash, DegreeActionReason reason)
         {
-            // Nếu bằng đã bị hủy hoàn toàn thì không được phép sửa đổi thông tin nữa
-            if (Status == StatusEnum.Revoked)
+            if (Status != StatusEnum.Confirmed)
+                return Result.Failure(DegreeErrors.InvalidStateTransition);
+
+            if (string.IsNullOrWhiteSpace(newHash))
+                return Result.Failure(DegreeErrors.InvalidCryptoSnapshot);
+
+            Status = StatusEnum.Pending_Update;
+            UpdatedAt = DateTime.UtcNow;
+
+            RaiseDomainEvent(new DegreeUpdatedEvent(Id, InstitutionId, reason.Code, CryptoData.DataHashLocal, newHash));
+
+            return Result.Success();
+        }
+
+        /// <summary>
+        /// Xác nhận cập nhật thông tin và neo chặn Merkle Root mới thành công lên Blockchain (Worker gọi)
+        /// </summary>
+        public Result ConfirmUpdate(string newMajor, string newClassification, CryptoSnapshot newCryptoData, string txHash)
+        {
+            if (string.IsNullOrWhiteSpace(txHash))
+                return Result.Failure(DegreeErrors.EmptyTransactionHash);
+
+            if (Status != StatusEnum.Pending_Update)
                 return Result.Failure(DegreeErrors.InvalidStateTransition);
 
             if (string.IsNullOrWhiteSpace(newMajor) || string.IsNullOrWhiteSpace(newClassification))
@@ -111,17 +134,39 @@ namespace ChainDegree.Core.Domain.Degrees
             if (newCryptoData == null || string.IsNullOrEmpty(newCryptoData.DataHashLocal))
                 return Result.Failure(DegreeErrors.InvalidCryptoSnapshot);
 
-            // Nếu bằng chưa lên chuỗi (Pending_Confirmation/Confirmation_Error) -> Giữ nguyên để Worker gom lô băm mới.
-            // Nếu bằng ĐÃ lên chuỗi ổn định (Confirmed) -> Chuyển sang Pending_Update để kích hoạt Worker cập nhật lại trên Blockchain Besu.
-            if (Status == StatusEnum.Confirmed)
-            {
-                Status = StatusEnum.Pending_Update;
-            }
+            Major = newMajor;
+            Classification = newClassification;
+            CryptoData = newCryptoData;
+            TxHashBlockchain = txHash;
+            Status = StatusEnum.Confirmed;
+            CurrentVersion++;
+            UpdatedAt = DateTime.UtcNow;
+
+            return Result.Success();
+        }
+
+        /// <summary>
+        /// Cập nhật trực tiếp thông tin văn bằng chưa lên chuỗi (Shortcut logic - US-2)
+        /// </summary>
+        public Result UpdateShortcut(string newMajor, string newClassification, CryptoSnapshot newCryptoData, DegreeActionReason reason)
+        {
+            if (Status != StatusEnum.Pending_Confirmation && Status != StatusEnum.Confirmation_Error)
+                return Result.Failure(DegreeErrors.InvalidStateTransition);
+
+            if (string.IsNullOrWhiteSpace(newMajor) || string.IsNullOrWhiteSpace(newClassification))
+                return Result.Failure(DegreeErrors.MissingAcademicDetails);
+
+            if (newCryptoData == null || string.IsNullOrEmpty(newCryptoData.DataHashLocal))
+                return Result.Failure(DegreeErrors.InvalidCryptoSnapshot);
+
+            var previousHash = CryptoData.DataHashLocal;
 
             Major = newMajor;
             Classification = newClassification;
             CryptoData = newCryptoData;
             UpdatedAt = DateTime.UtcNow;
+
+            RaiseDomainEvent(new DegreeUpdatedWithoutConfirmationEvent(Id, InstitutionId, reason.Code, previousHash, newCryptoData.DataHashLocal));
 
             return Result.Success();
         }
@@ -148,7 +193,7 @@ namespace ChainDegree.Core.Domain.Degrees
         /// <summary>
         /// Kích hoạt tiến trình yêu cầu thu hồi văn bằng đích danh bất đồng bộ (US-2 - Kịch bản bằng đã lên chuỗi)
         /// </summary>
-        public Result InitiateRevocation()
+        public Result InitiateRevocation(DegreeActionReason reason)
         {
             if (Status != StatusEnum.Confirmed)
                 return Result.Failure(DegreeErrors.InvalidStateTransition);
@@ -156,21 +201,41 @@ namespace ChainDegree.Core.Domain.Degrees
             Status = StatusEnum.Pending_Revocation;
             UpdatedAt = DateTime.UtcNow;
 
+            RaiseDomainEvent(new DegreeRevokedEvent(Id, InstitutionId, reason.Code));
+
             return Result.Success();
         }
 
         /// <summary>
-        /// Thực hiện thu hồi hoàn toàn hiệu lực văn bằng (Xử lý nhanh tại DB hoặc sau khi Worker bắn lệnh thu hồi lên Blockchain thành công)
+        /// Xác nhận đã đồng bộ giao dịch thu hồi lên Blockchain thành công (Worker gọi)
         /// </summary>
-        public Result Revoke()
+        public Result ConfirmRevocation(string txHash)
         {
-            // Trường hợp 1: Thu hồi nhanh (Bằng chưa lên chuỗi - Miễn phạt điểm uy tín tại US-2)
-            // Trường hợp 2: Hoàn tất thu hồi (Bằng đã lên chuỗi và tiến trình xử lý ngầm hoàn tất)
-            if (Status != StatusEnum.Pending_Confirmation && Status != StatusEnum.Pending_Revocation)
+            if (string.IsNullOrWhiteSpace(txHash))
+                return Result.Failure(DegreeErrors.EmptyTransactionHash);
+
+            if (Status != StatusEnum.Pending_Revocation)
+                return Result.Failure(DegreeErrors.InvalidStateTransition);
+
+            TxHashBlockchain = txHash;
+            Status = StatusEnum.Revoked;
+            UpdatedAt = DateTime.UtcNow;
+
+            return Result.Success();
+        }
+
+        /// <summary>
+        /// Thu hồi nhanh văn bằng chưa được neo chặn lên chuỗi (Shortcut logic - US-2)
+        /// </summary>
+        public Result RevokeShortcut(DegreeActionReason reason)
+        {
+            if (Status != StatusEnum.Pending_Confirmation && Status != StatusEnum.Confirmation_Error)
                 return Result.Failure(DegreeErrors.InvalidStateTransition);
 
             Status = StatusEnum.Revoked;
             UpdatedAt = DateTime.UtcNow;
+
+            RaiseDomainEvent(new DegreeRevokedWithoutConfirmationEvent(Id, InstitutionId, reason.Code));
 
             return Result.Success();
         }

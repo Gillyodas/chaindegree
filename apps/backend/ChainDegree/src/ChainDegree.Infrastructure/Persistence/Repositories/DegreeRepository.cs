@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Domain.Degrees;
+using ChainDegree.Core.Domain.Degrees.Entities;
 using ChainDegree.Core.Infrastructure.Persistence.Locking;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,6 +64,21 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
         public async Task<List<Degree>> GetPendingConfirmationAsync(int batchSize, CancellationToken ct = default)
         {
             return await _lockStrategy.GetAndLockPendingDegreesAsync(_context, batchSize, ct);
+        }
+
+        public async Task AddUpdateRequestAsync(DegreeUpdateRequest request, CancellationToken ct = default)
+        {
+            await _context.DegreeUpdateRequests.AddAsync(request, ct);
+        }
+
+        public async Task<DegreeUpdateRequest?> GetUpdateRequestByDegreeIdAsync(Guid degreeId, CancellationToken ct = default)
+        {
+            return await _context.DegreeUpdateRequests.FirstOrDefaultAsync(x => x.DegreeId == degreeId, ct);
+        }
+
+        public void RemoveUpdateRequest(DegreeUpdateRequest request)
+        {
+            _context.DegreeUpdateRequests.Remove(request);
         }
     }
 }

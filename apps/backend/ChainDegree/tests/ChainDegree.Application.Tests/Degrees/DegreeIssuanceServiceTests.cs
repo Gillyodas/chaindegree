@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Application.Abstractions.Policies;
+using ChainDegree.Core.Application.Abstractions.Crypto;
 using ChainDegree.Core.Application.Services;
 using ChainDegree.Core.Application.Degrees.Commands.IssueDegree;
 using ChainDegree.Core.Domain.Degrees;
@@ -21,8 +22,7 @@ namespace ChainDegree.Application.Tests.Degrees
     {
         private readonly Mock<IDegreeRepository> _mockRepo;
         private readonly Mock<IDegreeDuplicatePolicy> _mockDuplicatePolicy;
-        private readonly Mock<IJsonCanonicalizer> _mockCanonicalizer;
-        private readonly Mock<IHashService> _mockHashService;
+        private readonly Mock<IDegreeHashService> _mockHashService;
         private readonly Mock<ILogger<DegreeIssuanceService>> _mockLogger;
         private readonly DegreeIssuanceService _service;
 
@@ -30,14 +30,12 @@ namespace ChainDegree.Application.Tests.Degrees
         {
             _mockRepo = new Mock<IDegreeRepository>();
             _mockDuplicatePolicy = new Mock<IDegreeDuplicatePolicy>();
-            _mockCanonicalizer = new Mock<IJsonCanonicalizer>();
-            _mockHashService = new Mock<IHashService>();
+            _mockHashService = new Mock<IDegreeHashService>();
             _mockLogger = new Mock<ILogger<DegreeIssuanceService>>();
 
             _service = new DegreeIssuanceService(
                 _mockRepo.Object,
                 _mockDuplicatePolicy.Object,
-                _mockCanonicalizer.Object,
                 _mockHashService.Object,
                 _mockLogger.Object);
         }
@@ -54,16 +52,17 @@ namespace ChainDegree.Application.Tests.Degrees
                 new(studentId, "Software Engineering", "Giỏi", DateTime.UtcNow)
             };
 
+            var mockDomainHash = new Mock<IHashService>();
+            mockDomainHash.Setup(h => h.GenerateSalt()).Returns(Result<string>.Success("mocked_salt_123456"));
+            mockDomainHash.Setup(h => h.HashData(It.IsAny<string>(), It.IsAny<string>())).Returns(Result<string>.Success("mocked_hash_value"));
+            var fakeCryptoSnapshot = CryptoSnapshot.Create("canonical_json", mockDomainHash.Object).Value;
+
             _mockRepo.Setup(r => r.GetTotalCountAsync(It.IsAny<CancellationToken>())).ReturnsAsync(0L);
             _mockDuplicatePolicy.Setup(d => d.IsDuplicateAsync(institutionId, studentId, "Software Engineering", It.IsAny<int>(), It.IsAny<CancellationToken>()))
                                 .ReturnsAsync(false);
             
-            _mockCanonicalizer.Setup(c => c.Canonicalize(It.IsAny<object>()))
-                              .Returns(Result<string>.Success("canonical_json"));
-
-            _mockHashService.Setup(h => h.GenerateSalt()).Returns(Result<string>.Success("mocked_salt_123456"));
-            _mockHashService.Setup(h => h.HashData("canonical_json", "mocked_salt_123456"))
-                            .Returns(Result<string>.Success("mocked_hash_value"));
+            _mockHashService.Setup(h => h.RecalculateAsync(It.IsAny<DegreeData>(), It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(fakeCryptoSnapshot);
 
             // Act
             var result = await _service.IssueDegreesAsync(institutionId, registrarId, items, CancellationToken.None);
@@ -119,8 +118,8 @@ namespace ChainDegree.Application.Tests.Degrees
             _mockDuplicatePolicy.Setup(d => d.IsDuplicateAsync(institutionId, studentId, "Software Engineering", It.IsAny<int>(), It.IsAny<CancellationToken>()))
                                 .ReturnsAsync(false);
 
-            _mockCanonicalizer.Setup(c => c.Canonicalize(It.IsAny<object>()))
-                              .Returns(Result<string>.Failure(CryptoErrors.CanonicalizationFailed));
+            _mockHashService.Setup(h => h.RecalculateAsync(It.IsAny<DegreeData>(), It.IsAny<CancellationToken>()))
+                            .ThrowsAsync(new InvalidOperationException("Canonicalization failed"));
 
             // Act
             var result = await _service.IssueDegreesAsync(institutionId, registrarId, items, CancellationToken.None);
@@ -129,7 +128,7 @@ namespace ChainDegree.Application.Tests.Degrees
             Assert.Empty(result.Successes);
             Assert.Single(result.Failures);
             Assert.Equal(studentId, result.Failures[0].StudentId);
-            Assert.Equal(CryptoErrors.CanonicalizationFailed.Message, result.Failures[0].Reason);
+            Assert.Equal("Canonicalization failed", result.Failures[0].Reason);
         }
     }
 }

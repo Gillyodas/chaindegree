@@ -47,6 +47,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
             // Ethereum/Besu tx hash: "0x" + 64 hex char = 66 chars
             builder.Property(x => x.TxHashBlockchain).HasMaxLength(66);
 
+            builder.Property(x => x.CurrentVersion).IsRequired().HasDefaultValue(1);
+
             builder.Property(x => x.IssuedAt).IsRequired();
 
             builder.Property(x => x.RowVersion).IsRowVersion();

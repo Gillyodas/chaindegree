@@ -166,7 +166,7 @@ Deliver the complete degree update and revocation feature.
 
 - Status transitions: `Confirmed` → `Pending_Revocation` / `Pending_Update`, and finalization to `Revoked` / `Confirmed`.
 - Shortcut logic for `Pending_Confirmation` degrees: immediate revocation to `Revoked`, direct update with hash recalculation.
-- Domain events: `DegreeRevokedEvent`, `DegreeUpdatedEvent`, `PendingDegreeShortcutEvent` (signals reputation exemption without requiring Reputation module).
+- Domain events: `DegreeRevokedEvent`, `DegreeUpdatedEvent`, `DegreeRevokedWithoutConfirmationEvent`, `DegreeUpdatedWithoutConfirmationEvent` (signals reputation exemption without requiring Reputation module).
 - Required reason/comment handling with predefined reason categories.
 - The system must preserve previous hash/version information for every confirmed degree update. Previous blockchain-anchored hashes must remain auditable and immutable.
 

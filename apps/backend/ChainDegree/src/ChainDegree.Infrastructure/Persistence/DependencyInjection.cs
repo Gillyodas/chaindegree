@@ -53,6 +53,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddScoped<AuditableEntityInterceptor>();
             services.AddScoped<SoftDeleteInterceptor>();
             services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
+            services.AddScoped<DegreeProcessingInterceptor>();
 
             // Register DbContext
             services.AddDbContext<ChainDegreeDbContext>((sp, options) =>
@@ -62,7 +63,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                        .AddInterceptors(
                            sp.GetRequiredService<AuditableEntityInterceptor>(),
                            sp.GetRequiredService<SoftDeleteInterceptor>(),
-                           sp.GetRequiredService<ConvertDomainEventsToOutboxInterceptor>());
+                           sp.GetRequiredService<ConvertDomainEventsToOutboxInterceptor>(),
+                           sp.GetRequiredService<DegreeProcessingInterceptor>());
             });
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();

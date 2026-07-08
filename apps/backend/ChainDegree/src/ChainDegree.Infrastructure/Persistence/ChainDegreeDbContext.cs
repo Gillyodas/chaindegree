@@ -8,6 +8,7 @@ using ChainDegree.Core.Domain.Recruiters;
 using ChainDegree.Core.Domain.Recruiters.Entities;
 using ChainDegree.Core.Domain.Students;
 using ChainDegree.Core.Domain.Degrees;
+using ChainDegree.Core.Domain.Degrees.Entities;
 using ChainDegree.Core.Domain.Reports;
 using ChainDegree.Core.Domain.Jobs;
 using ChainDegree.Core.Domain.Jobs.Entities;
@@ -62,6 +63,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
         public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
         public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
         public DbSet<DegreeProcessingRecord> DegreeProcessingRecords => Set<DegreeProcessingRecord>();
+        public DbSet<DegreeVersion> DegreeVersions => Set<DegreeVersion>();
+        public DbSet<DegreeUpdateRequest> DegreeUpdateRequests => Set<DegreeUpdateRequest>();
         public DbSet<BatchRecord> BatchRecords => Set<BatchRecord>();
         public DbSet<BatchDegreeRecord> BatchDegreeRecords => Set<BatchDegreeRecord>();
 

@@ -3,6 +3,7 @@ using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Degrees.Enums;
 using ChainDegree.Core.Domain.Degrees.ValueObjects;
 using ChainDegree.Core.Domain.Degrees.Interfaces;
+using ChainDegree.Core.Domain.Degrees.Events;
 using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
 using ChainDegree.SharedKernel.Result;
 using Moq;
@@ -191,6 +192,185 @@ namespace ChainDegree.Domain.Tests.Degrees
             // Assert
             Assert.True(result.IsFailure);
             Assert.Equal(DegreeErrors.InvalidStateTransition, result.Error);
+        }
+
+        [Fact]
+        public void InitiateUpdate_FromConfirmed_SetsPendingUpdateAndRaisesEvent()
+        {
+            // Arrange
+            var degreeResult = Degree.Create(
+                0,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "Software Engineering",
+                "Giỏi",
+                _fakeCryptoSnapshot);
+            var degree = degreeResult.Value;
+            degree.ConfirmBlockchainSync("0x" + new string('a', 64));
+            degree.ClearDomainEvents();
+            var reason = DegreeActionReason.FromCode("S-01");
+
+            // Act
+            var result = degree.InitiateUpdate("new_mocked_hash", reason);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(StatusEnum.Pending_Update, degree.Status);
+            var updateEvent = Assert.Single(degree.DomainEvents);
+            Assert.IsType<DegreeUpdatedEvent>(updateEvent);
+            var typedEvent = (DegreeUpdatedEvent)updateEvent;
+            Assert.Equal(degree.Id, typedEvent.DegreeId);
+            Assert.Equal("S-01", typedEvent.ReasonCode);
+        }
+
+        [Fact]
+        public void ConfirmUpdate_FromPendingUpdate_SetsConfirmedUpdatesDataAndIncrementsVersion()
+        {
+            // Arrange
+            var degreeResult = Degree.Create(
+                0,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "Software Engineering",
+                "Giỏi",
+                _fakeCryptoSnapshot);
+            var degree = degreeResult.Value;
+            degree.ConfirmBlockchainSync("0x" + new string('a', 64));
+            var reason = DegreeActionReason.FromCode("S-01");
+            degree.InitiateUpdate("new_mocked_hash", reason);
+            var newCryptoSnapshot = CryptoSnapshot.Create("{\"major\":\"Artificial Intelligence\"}", _mockHashService.Object).Value;
+            var txHash = "0x" + new string('b', 64);
+
+            // Act
+            var result = degree.ConfirmUpdate("Artificial Intelligence", "Xuất sắc", newCryptoSnapshot, txHash);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(StatusEnum.Confirmed, degree.Status);
+            Assert.Equal(2, degree.CurrentVersion);
+            Assert.Equal("Artificial Intelligence", degree.Major);
+            Assert.Equal("Xuất sắc", degree.Classification);
+            Assert.Equal(txHash, degree.TxHashBlockchain);
+        }
+
+        [Fact]
+        public void UpdateShortcut_FromPendingConfirmation_UpdatesDataImmediatelyAndRaisesShortcutEvent()
+        {
+            // Arrange
+            var degreeResult = Degree.Create(
+                0,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "Software Engineering",
+                "Giỏi",
+                _fakeCryptoSnapshot);
+            var degree = degreeResult.Value;
+            degree.ClearDomainEvents();
+            var reason = DegreeActionReason.FromCode("S-01");
+            var newCryptoSnapshot = CryptoSnapshot.Create("{\"major\":\"Artificial Intelligence\"}", _mockHashService.Object).Value;
+
+            // Act
+            var result = degree.UpdateShortcut("Artificial Intelligence", "Xuất sắc", newCryptoSnapshot, reason);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(StatusEnum.Pending_Confirmation, degree.Status);
+            Assert.Equal(1, degree.CurrentVersion);
+            Assert.Equal("Artificial Intelligence", degree.Major);
+            var updateEvent = Assert.Single(degree.DomainEvents);
+            Assert.IsType<DegreeUpdatedWithoutConfirmationEvent>(updateEvent);
+            var typedEvent = (DegreeUpdatedWithoutConfirmationEvent)updateEvent;
+            Assert.Equal(degree.Id, typedEvent.DegreeId);
+            Assert.Equal("S-01", typedEvent.ReasonCode);
+        }
+
+        [Fact]
+        public void InitiateRevocation_FromConfirmed_SetsPendingRevocationAndRaisesEvent()
+        {
+            // Arrange
+            var degreeResult = Degree.Create(
+                0,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "Software Engineering",
+                "Giỏi",
+                _fakeCryptoSnapshot);
+            var degree = degreeResult.Value;
+            degree.ConfirmBlockchainSync("0x" + new string('a', 64));
+            degree.ClearDomainEvents();
+            var reason = DegreeActionReason.FromCode("R-01");
+
+            // Act
+            var result = degree.InitiateRevocation(reason);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(StatusEnum.Pending_Revocation, degree.Status);
+            var revokeEvent = Assert.Single(degree.DomainEvents);
+            Assert.IsType<DegreeRevokedEvent>(revokeEvent);
+            var typedEvent = (DegreeRevokedEvent)revokeEvent;
+            Assert.Equal(degree.Id, typedEvent.DegreeId);
+            Assert.Equal("R-01", typedEvent.ReasonCode);
+        }
+
+        [Fact]
+        public void ConfirmRevocation_FromPendingRevocation_SetsRevokedAndTxHash()
+        {
+            // Arrange
+            var degreeResult = Degree.Create(
+                0,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "Software Engineering",
+                "Giỏi",
+                _fakeCryptoSnapshot);
+            var degree = degreeResult.Value;
+            degree.ConfirmBlockchainSync("0x" + new string('a', 64));
+            var reason = DegreeActionReason.FromCode("R-01");
+            degree.InitiateRevocation(reason);
+            var txHash = "0x" + new string('c', 64);
+
+            // Act
+            var result = degree.ConfirmRevocation(txHash);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(StatusEnum.Revoked, degree.Status);
+            Assert.Equal(txHash, degree.TxHashBlockchain);
+        }
+
+        [Fact]
+        public void RevokeShortcut_FromPendingConfirmation_SetsRevokedImmediatelyAndRaisesShortcutEvent()
+        {
+            // Arrange
+            var degreeResult = Degree.Create(
+                0,
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "Software Engineering",
+                "Giỏi",
+                _fakeCryptoSnapshot);
+            var degree = degreeResult.Value;
+            degree.ClearDomainEvents();
+            var reason = DegreeActionReason.FromCode("R-01");
+
+            // Act
+            var result = degree.RevokeShortcut(reason);
+
+            // Assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(StatusEnum.Revoked, degree.Status);
+            var revokeEvent = Assert.Single(degree.DomainEvents);
+            Assert.IsType<DegreeRevokedWithoutConfirmationEvent>(revokeEvent);
+            var typedEvent = (DegreeRevokedWithoutConfirmationEvent)revokeEvent;
+            Assert.Equal(degree.Id, typedEvent.DegreeId);
+            Assert.Equal("R-01", typedEvent.ReasonCode);
         }
     }
 }

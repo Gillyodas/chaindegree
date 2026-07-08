@@ -5,10 +5,10 @@ using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Application.Abstractions.Policies;
 using ChainDegree.Core.Application.Abstractions.Services;
+using ChainDegree.Core.Application.Abstractions.Crypto;
 using ChainDegree.Core.Application.Degrees.Commands.IssueDegree;
 using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Degrees.ValueObjects;
-using ChainDegree.Core.Domain.Degrees.Interfaces;
 using ChainDegree.SharedKernel.Common.Log;
 using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
 using ChainDegree.SharedKernel.Result;
@@ -20,22 +20,19 @@ namespace ChainDegree.Core.Application.Services
     {
         private readonly IDegreeRepository _degreeRepository;
         private readonly IDegreeDuplicatePolicy _duplicatePolicy;
-        private readonly IJsonCanonicalizer _canonicalizer;
-        private readonly IHashService _hashService;
+        private readonly IDegreeHashService _degreeHashService;
         private readonly ILogger<DegreeIssuanceService> _logger;
 
         public DegreeIssuanceService(
             IDegreeRepository degreeRepository,
             IDegreeDuplicatePolicy duplicatePolicy,
-            IJsonCanonicalizer canonicalizer,
-            IHashService hashService,
-            ILogger<DegreeIssuanceService> _logger)
+            IDegreeHashService degreeHashService,
+            ILogger<DegreeIssuanceService> logger)
         {
             _degreeRepository = degreeRepository;
             _duplicatePolicy = duplicatePolicy;
-            _canonicalizer = canonicalizer;
-            _hashService = hashService;
-            this._logger = _logger;
+            _degreeHashService = degreeHashService;
+            _logger = logger;
         }
 
         public async Task<PartialResult<Degree, IssueDegreeFailureDto>> IssueDegreesAsync(
@@ -72,33 +69,26 @@ namespace ChainDegree.Core.Application.Services
                     continue;
                 }
 
-                // 2. Build plain data object for canonicalization
-                // The canonical JSON must contain: studentId, degreeCode, major, classification, issuedAt (ISO 8601 UTC string)
+                // 2. Build plain data object for canonicalization and hashing
                 var tempIndex = totalCount + successes.Count;
                 var generatedCode = $"DEG-{DateTime.UtcNow.Year}-{(tempIndex + 1):D6}";
                 
-                var plainDataObj = new
-                {
-                    classification = item.Classification,
-                    degreeCode = generatedCode,
-                    issuedAt = item.IssuedAt.ToString("o"),
-                    major = item.Major,
-                    studentId = item.StudentId.ToString()
-                };
+                var degreeData = new DegreeData(
+                    generatedCode,
+                    item.StudentId,
+                    item.Major,
+                    item.Classification,
+                    item.IssuedAt);
 
-                // 3. Canonicalize plain data
-                var canonResult = _canonicalizer.Canonicalize(plainDataObj);
-                if (canonResult.IsFailure)
+                // 3. Create CryptoSnapshot via IDegreeHashService
+                CryptoSnapshot cryptoSnapshot;
+                try
                 {
-                    failures.Add(new IssueDegreeFailureDto(item.StudentId, item.Major, canonResult.Error.Message));
-                    continue;
+                    cryptoSnapshot = await _degreeHashService.RecalculateAsync(degreeData, ct);
                 }
-
-                // 4. Create CryptoSnapshot
-                var cryptoResult = CryptoSnapshot.Create(canonResult.Value, _hashService);
-                if (cryptoResult.IsFailure)
+                catch (Exception ex)
                 {
-                    failures.Add(new IssueDegreeFailureDto(item.StudentId, item.Major, cryptoResult.Error.Message));
+                    failures.Add(new IssueDegreeFailureDto(item.StudentId, item.Major, ex.Message));
                     continue;
                 }
 
@@ -106,9 +96,9 @@ namespace ChainDegree.Core.Application.Services
                     DegreeLogs.Degree_CryptoHashGenerated.Code,
                     DegreeLogs.Degree_CryptoHashGenerated.Message,
                     item.StudentId,
-                    cryptoResult.Value.DataHashLocal);
+                    cryptoSnapshot.DataHashLocal);
 
-                // 5. Create Domain Entity
+                // 4. Create Domain Entity
                 var degreeResult = Degree.Create(
                     tempIndex,
                     institutionId,
@@ -116,7 +106,7 @@ namespace ChainDegree.Core.Application.Services
                     item.StudentId,
                     item.Major,
                     item.Classification,
-                    cryptoResult.Value);
+                    cryptoSnapshot);
 
                 if (degreeResult.IsFailure)
                 {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using ChainDegree.Core.Domain.Degrees;
+using ChainDegree.Core.Domain.Degrees.Entities;
 
 namespace ChainDegree.Core.Application.Abstractions.Repositories
 {
@@ -15,5 +16,8 @@ namespace ChainDegree.Core.Application.Abstractions.Repositories
         Task AddAsync(Degree degree, CancellationToken ct = default);
         Task AddRangeAsync(IEnumerable<Degree> degrees, CancellationToken ct = default);
         Task<List<Degree>> GetPendingConfirmationAsync(int batchSize, CancellationToken ct = default);
+        Task AddUpdateRequestAsync(DegreeUpdateRequest request, CancellationToken ct = default);
+        Task<DegreeUpdateRequest?> GetUpdateRequestByDegreeIdAsync(Guid degreeId, CancellationToken ct = default);
+        void RemoveUpdateRequest(DegreeUpdateRequest request);
     }
 }

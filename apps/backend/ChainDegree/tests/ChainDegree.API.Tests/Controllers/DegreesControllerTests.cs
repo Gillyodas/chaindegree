@@ -7,6 +7,8 @@ using ChainDegree.API.Controllers;
 using ChainDegree.Core.Application.Degrees.Commands.IssueDegree;
 using ChainDegree.Core.Application.Degrees.Commands.RetryDegreeConfirmation;
 using ChainDegree.Core.Application.Degrees.Queries.GetBatchStatus;
+using ChainDegree.Core.Application.Degrees.Commands.RevokeDegree;
+using ChainDegree.Core.Application.Degrees.Commands.UpdateDegree;
 using ChainDegree.Core.Application.Abstractions.Queries;
 using ChainDegree.SharedKernel.Result;
 using MediatR;
@@ -103,6 +105,88 @@ namespace ChainDegree.API.Tests.Controllers
 
             // Assert
             Assert.IsType<AcceptedResult>(result);
+        }
+
+        [Fact]
+        public async Task RevokeDegree_WithShortcut_ReturnsOk()
+        {
+            // Arrange
+            var degreeId = Guid.NewGuid();
+            var request = new RevokeDegreeRequest("R-01");
+            var response = new RevokeDegreeResponse(degreeId, "Revoked", true, "Shortcut success");
+
+            _mockSender.Setup(s => s.Send(It.IsAny<RevokeDegreeCommand>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<RevokeDegreeResponse>.Success(response));
+
+            // Act
+            var result = await _controller.RevokeDegree(degreeId, request, CancellationToken.None);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedValue = Assert.IsType<RevokeDegreeResponse>(okResult.Value);
+            Assert.True(returnedValue.IsShortcut);
+            Assert.Equal("Revoked", returnedValue.Status);
+        }
+
+        [Fact]
+        public async Task RevokeDegree_WithNormalFlow_ReturnsAccepted()
+        {
+            // Arrange
+            var degreeId = Guid.NewGuid();
+            var request = new RevokeDegreeRequest("R-01");
+            var response = new RevokeDegreeResponse(degreeId, "Pending_Revocation", false, "Accepted and queued");
+
+            _mockSender.Setup(s => s.Send(It.IsAny<RevokeDegreeCommand>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<RevokeDegreeResponse>.Success(response));
+
+            // Act
+            var result = await _controller.RevokeDegree(degreeId, request, CancellationToken.None);
+
+            // Assert
+            var acceptedResult = Assert.IsType<AcceptedResult>(result);
+            var returnedValue = Assert.IsType<RevokeDegreeResponse>(acceptedResult.Value);
+            Assert.False(returnedValue.IsShortcut);
+            Assert.Equal("Pending_Revocation", returnedValue.Status);
+        }
+
+        [Fact]
+        public async Task UpdateDegree_WithShortcut_ReturnsOk()
+        {
+            // Arrange
+            var degreeId = Guid.NewGuid();
+            var request = new UpdateDegreeRequest("AI", "Xuất sắc", "S-01");
+            var response = new UpdateDegreeResponse(degreeId, "Pending_Confirmation", true, "Shortcut success");
+
+            _mockSender.Setup(s => s.Send(It.IsAny<UpdateDegreeCommand>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<UpdateDegreeResponse>.Success(response));
+
+            // Act
+            var result = await _controller.UpdateDegree(degreeId, request, CancellationToken.None);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedValue = Assert.IsType<UpdateDegreeResponse>(okResult.Value);
+            Assert.True(returnedValue.IsShortcut);
+        }
+
+        [Fact]
+        public async Task UpdateDegree_WithNormalFlow_ReturnsAccepted()
+        {
+            // Arrange
+            var degreeId = Guid.NewGuid();
+            var request = new UpdateDegreeRequest("AI", "Xuất sắc", "S-01");
+            var response = new UpdateDegreeResponse(degreeId, "Pending_Update", false, "Accepted and queued");
+
+            _mockSender.Setup(s => s.Send(It.IsAny<UpdateDegreeCommand>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<UpdateDegreeResponse>.Success(response));
+
+            // Act
+            var result = await _controller.UpdateDegree(degreeId, request, CancellationToken.None);
+
+            // Assert
+            var acceptedResult = Assert.IsType<AcceptedResult>(result);
+            var returnedValue = Assert.IsType<UpdateDegreeResponse>(acceptedResult.Value);
+            Assert.False(returnedValue.IsShortcut);
         }
     }
 }

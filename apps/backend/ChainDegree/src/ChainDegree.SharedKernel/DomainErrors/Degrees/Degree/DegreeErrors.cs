@@ -34,6 +34,12 @@ namespace ChainDegree.SharedKernel.DomainErrors.Degrees.Degree
         public static readonly Error StudentNotFound =
             Error.NotFound("Degree.StudentNotFound", "The specified student was not found.");
 
+        public static readonly Error NotFound =
+            Error.NotFound("Degree.NotFound", "The specified degree was not found.");
+
+        public static readonly Error InstitutionMismatch =
+            Error.Validation("Degree.InstitutionMismatch", "The registrar does not belong to the institution that manages this degree.");
+
         public static readonly Error NoDegreeToIssue =
             Error.Validation("Degree.NoDegreeToIssue", "No valid degrees to issue after validation.");
 

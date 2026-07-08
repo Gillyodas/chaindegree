@@ -9,6 +9,8 @@ using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Application.Degrees.Commands.IssueDegree;
 using ChainDegree.Core.Application.Degrees.Commands.RetryDegreeConfirmation;
 using ChainDegree.Core.Application.Degrees.Queries.GetBatchStatus;
+using ChainDegree.Core.Application.Degrees.Commands.UpdateDegree;
+using ChainDegree.Core.Application.Degrees.Commands.RevokeDegree;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -88,6 +90,64 @@ namespace ChainDegree.API.Controllers
             }
 
             return Accepted();
+        }
+
+        [HttpPost("{id:guid}/revoke")]
+        [Authorize(Policy = Roles.Registrar)]
+        [ProducesResponseType(typeof(RevokeDegreeResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(RevokeDegreeResponse), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RevokeDegree(
+            Guid id,
+            [FromBody] RevokeDegreeRequest request,
+            CancellationToken ct)
+        {
+            var command = new RevokeDegreeCommand(id, request.ReasonCode);
+            var result = await _sender.Send(command, ct);
+
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+
+            if (result.Value.IsShortcut)
+            {
+                return Ok(result.Value);
+            }
+
+            return Accepted(result.Value);
+        }
+
+        [HttpPut("{id:guid}")]
+        [Authorize(Policy = Roles.Registrar)]
+        [ProducesResponseType(typeof(UpdateDegreeResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UpdateDegreeResponse), StatusCodes.Status202Accepted)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateDegree(
+            Guid id,
+            [FromBody] UpdateDegreeRequest request,
+            CancellationToken ct)
+        {
+            var command = new UpdateDegreeCommand(id, request.Major, request.Classification, request.ReasonCode);
+            var result = await _sender.Send(command, ct);
+
+            if (result.IsFailure)
+            {
+                return HandleFailure(result);
+            }
+
+            if (result.Value.IsShortcut)
+            {
+                return Ok(result.Value);
+            }
+
+            return Accepted(result.Value);
         }
     }
 }
