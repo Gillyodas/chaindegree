@@ -20,11 +20,15 @@ namespace ChainDegree.Core.Application.Services
 
         public Task<CryptoSnapshot> RecalculateAsync(DegreeData data, CancellationToken ct = default)
         {
+            var utcIssuedAt = data.IssuedAt.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(data.IssuedAt, DateTimeKind.Utc)
+                : data.IssuedAt.ToUniversalTime();
+
             var plainDataObj = new
             {
                 classification = data.Classification,
                 degreeCode = data.DegreeCode,
-                issuedAt = data.IssuedAt.ToString("o"),
+                issuedAt = utcIssuedAt.ToString("o"),
                 major = data.Major,
                 studentId = data.StudentId.ToString()
             };
@@ -46,11 +50,15 @@ namespace ChainDegree.Core.Application.Services
 
         public Task<string> CalculateHashAsync(DegreeData data, string salt, CancellationToken ct = default)
         {
+            var utcIssuedAt = data.IssuedAt.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(data.IssuedAt, DateTimeKind.Utc)
+                : data.IssuedAt.ToUniversalTime();
+
             var plainDataObj = new
             {
                 classification = data.Classification,
                 degreeCode = data.DegreeCode,
-                issuedAt = data.IssuedAt.ToString("o"),
+                issuedAt = utcIssuedAt.ToString("o"),
                 major = data.Major,
                 studentId = data.StudentId.ToString()
             };
