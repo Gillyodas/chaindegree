@@ -1,3 +1,4 @@
+using System;
 using ChainDegree.Core.Domain.Degrees.Enums;
 
 namespace ChainDegree.Core.Domain.Degrees.ValueObjects
@@ -11,6 +12,11 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
         public string? MerkleProofJson { get; }
         public int Version { get; }
         public StatusEnum Status { get; }
+        public string StudentFullName { get; }
+        public string Major { get; }
+        public string Classification { get; }
+        public Guid StudentId { get; }
+        public DateTime IssuedAt { get; }
 
         public VerificationSnapshot(
             string dataHash,
@@ -19,7 +25,12 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
             string txHash,
             string? merkleProofJson,
             int version,
-            StatusEnum status)
+            StatusEnum status,
+            string studentFullName,
+            string major,
+            string classification,
+            Guid studentId,
+            DateTime issuedAt)
         {
             DataHash = dataHash;
             Salt = salt;
@@ -28,6 +39,11 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
             MerkleProofJson = merkleProofJson;
             Version = version;
             Status = status;
+            StudentFullName = studentFullName;
+            Major = major;
+            Classification = classification;
+            StudentId = studentId;
+            IssuedAt = issuedAt;
         }
     }
 }

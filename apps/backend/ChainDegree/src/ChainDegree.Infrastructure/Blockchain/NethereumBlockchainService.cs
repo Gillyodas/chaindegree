@@ -40,5 +40,15 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
                 ErrorMessage: null
             );
         }
+
+        public async Task<string?> GetAnchoredMerkleRootAsync(
+            string txHash,
+            CancellationToken ct = default)
+        {
+            // For this phase, both simulated and empty configurations delegate to the FakeBlockchainService
+            // which handles the static storage of anchored roots.
+            var fakeService = new FakeBlockchainService();
+            return await fakeService.GetAnchoredMerkleRootAsync(txHash, ct);
+        }
     }
 }

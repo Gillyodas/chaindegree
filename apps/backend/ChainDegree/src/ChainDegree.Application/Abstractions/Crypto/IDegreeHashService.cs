@@ -15,5 +15,6 @@ namespace ChainDegree.Core.Application.Abstractions.Crypto
     public interface IDegreeHashService
     {
         Task<CryptoSnapshot> RecalculateAsync(DegreeData data, CancellationToken ct = default);
+        Task<string> CalculateHashAsync(DegreeData data, string salt, CancellationToken ct = default);
     }
 }

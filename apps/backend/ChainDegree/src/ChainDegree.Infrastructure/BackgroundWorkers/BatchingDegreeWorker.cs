@@ -203,6 +203,9 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                                 var staging = await dbContext.DegreeUpdateRequests.FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
                                 if (staging != null)
                                 {
+                                    var oldProofRecord = await dbContext.BatchDegreeRecords
+                                        .FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+
                                     // 1. Insert DegreeVersion (Lưu bản cũ)
                                     var previousVersion = DegreeVersion.Create(
                                         degree.Id,
@@ -210,7 +213,12 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                                         degree.CryptoData.DataHashLocal,
                                         staging.CryptoData.DataHashLocal,
                                         degree.TxHashBlockchain ?? txResult.TxHash!,
-                                        degree.UpdatedAt
+                                        degree.UpdatedAt,
+                                        degree.CryptoData.PlainDataJson,
+                                        degree.CryptoData.Salt,
+                                        degree.Major,
+                                        degree.Classification,
+                                        oldProofRecord?.ProofHashesJson
                                     );
                                     dbContext.DegreeVersions.Add(previousVersion);
 

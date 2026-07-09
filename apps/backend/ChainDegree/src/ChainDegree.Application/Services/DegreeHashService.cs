@@ -43,5 +43,31 @@ namespace ChainDegree.Core.Application.Services
 
             return Task.FromResult(cryptoResult.Value);
         }
+
+        public Task<string> CalculateHashAsync(DegreeData data, string salt, CancellationToken ct = default)
+        {
+            var plainDataObj = new
+            {
+                classification = data.Classification,
+                degreeCode = data.DegreeCode,
+                issuedAt = data.IssuedAt.ToString("o"),
+                major = data.Major,
+                studentId = data.StudentId.ToString()
+            };
+
+            var canonResult = _canonicalizer.Canonicalize(plainDataObj);
+            if (canonResult.IsFailure)
+            {
+                throw new InvalidOperationException($"Canonicalization failed: {canonResult.Error.Message}");
+            }
+
+            var hashResult = _hashService.HashData(canonResult.Value, salt);
+            if (hashResult.IsFailure)
+            {
+                throw new InvalidOperationException($"Hashing failed: {hashResult.Error.Message}");
+            }
+
+            return Task.FromResult(hashResult.Value);
+        }
     }
 }

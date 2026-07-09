@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Degrees.Entities;
+using ChainDegree.Core.Domain.Degrees.ValueObjects;
 
 namespace ChainDegree.Core.Application.Abstractions.Repositories
 {
@@ -19,5 +20,6 @@ namespace ChainDegree.Core.Application.Abstractions.Repositories
         Task AddUpdateRequestAsync(DegreeUpdateRequest request, CancellationToken ct = default);
         Task<DegreeUpdateRequest?> GetUpdateRequestByDegreeIdAsync(Guid degreeId, CancellationToken ct = default);
         void RemoveUpdateRequest(DegreeUpdateRequest request);
+        Task<VerificationSnapshot?> GetVerificationSnapshotAsync(string degreeCode, int? version, CancellationToken ct = default);
     }
 }

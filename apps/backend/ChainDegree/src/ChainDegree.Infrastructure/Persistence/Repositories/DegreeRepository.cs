@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Degrees.Entities;
+using ChainDegree.Core.Domain.Degrees.Enums;
+using ChainDegree.Core.Domain.Degrees.ValueObjects;
+using ChainDegree.Core.Domain.Students;
 using ChainDegree.Core.Infrastructure.Persistence.Locking;
+using ChainDegree.Core.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
@@ -79,6 +83,98 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
         public void RemoveUpdateRequest(DegreeUpdateRequest request)
         {
             _context.DegreeUpdateRequests.Remove(request);
+        }
+
+        public async Task<VerificationSnapshot?> GetVerificationSnapshotAsync(string degreeCode, int? version, CancellationToken ct = default)
+        {
+            var degree = await _context.Degrees.FirstOrDefaultAsync(x => x.DegreeCode == degreeCode, ct);
+            if (degree == null)
+            {
+                return null;
+            }
+
+            var student = await _context.Students.FirstOrDefaultAsync(x => x.Id == degree.StudentId, ct);
+            var studentFullName = student?.FullName ?? "Unknown Student";
+
+            if (version.HasValue && version.Value < degree.CurrentVersion)
+            {
+                var historicalVersion = await _context.DegreeVersions
+                    .FirstOrDefaultAsync(x => x.DegreeId == degree.Id && x.Version == version.Value, ct);
+
+                if (historicalVersion == null)
+                {
+                    return null;
+                }
+
+                return new VerificationSnapshot(
+                    dataHash: historicalVersion.CurrentHash,
+                    salt: historicalVersion.Salt,
+                    plainDataJson: historicalVersion.PlainDataJson,
+                    txHash: historicalVersion.BlockchainTxHash,
+                    merkleProofJson: historicalVersion.MerkleProofJson,
+                    version: historicalVersion.Version,
+                    status: degree.Status, // Status changes apply globally
+                    studentFullName: studentFullName,
+                    major: historicalVersion.Major,
+                    classification: historicalVersion.Classification,
+                    studentId: degree.StudentId,
+                    issuedAt: degree.IssuedAt
+                );
+            }
+
+            var batchDegreeRecord = await _context.BatchDegreeRecords
+                .FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+
+            return new VerificationSnapshot(
+                dataHash: degree.CryptoData.DataHashLocal,
+                salt: degree.CryptoData.Salt,
+                plainDataJson: degree.CryptoData.PlainDataJson,
+                txHash: degree.TxHashBlockchain ?? string.Empty,
+                merkleProofJson: batchDegreeRecord != null 
+                    ? ConstructMerkleProofJson(batchDegreeRecord, degree.CryptoData.DataHashLocal) 
+                    : null,
+                version: degree.CurrentVersion,
+                status: degree.Status,
+                studentFullName: studentFullName,
+                major: degree.Major,
+                classification: degree.Classification,
+                studentId: degree.StudentId,
+                issuedAt: degree.IssuedAt
+            );
+        }
+
+        private string? ConstructMerkleProofJson(BatchDegreeRecord batchRecord, string leafHash)
+        {
+            if (string.IsNullOrEmpty(batchRecord.ProofHashesJson)) return null;
+
+            try
+            {
+                var hashes = System.Text.Json.JsonSerializer.Deserialize<List<string>>(batchRecord.ProofHashesJson);
+                if (hashes == null) return null;
+
+                var directions = new List<bool>();
+                int currentIndex = batchRecord.LeafIndex;
+                for (int i = 0; i < hashes.Count; i++)
+                {
+                    bool isSiblingRight = currentIndex % 2 == 0;
+                    directions.Add(isSiblingRight);
+                    currentIndex /= 2;
+                }
+
+                var proofData = new
+                {
+                    LeafIndex = batchRecord.LeafIndex,
+                    LeafHash = leafHash,
+                    ProofHashes = hashes,
+                    ProofDirections = directions
+                };
+
+                return System.Text.Json.JsonSerializer.Serialize(proofData);
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

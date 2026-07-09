@@ -7,6 +7,9 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
 {
     public class FakeBlockchainService : IBlockchainService
     {
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _anchoredRoots = 
+            new(StringComparer.OrdinalIgnoreCase);
+
         public async Task<BlockchainTransactionResult> AnchorMerkleRootAsync(
             string merkleRoot,
             Guid batchId,
@@ -29,12 +32,33 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
             var txHash = "0x" + Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
             var blockNumber = DateTime.UtcNow.Ticks % 10000000;
 
+            _anchoredRoots[txHash] = merkleRoot;
+
             return new BlockchainTransactionResult(
                 IsSuccess: true,
                 TxHash: txHash,
                 BlockNumber: blockNumber,
                 ErrorMessage: null
             );
+        }
+
+        public async Task<string?> GetAnchoredMerkleRootAsync(
+            string txHash,
+            CancellationToken ct = default)
+        {
+            await Task.Delay(50, ct);
+            if (_anchoredRoots.TryGetValue(txHash, out var root))
+            {
+                return root;
+            }
+
+            // Fallback for tests that might use hardcoded txHashes
+            if (txHash.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                return "0x7777777777777777777777777777777777777777777777777777777777777777";
+            }
+
+            return null;
         }
     }
 }

@@ -20,6 +20,10 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
             builder.Property(x => x.CurrentHash).IsRequired().HasMaxLength(150);
             builder.Property(x => x.BlockchainTxHash).IsRequired().HasMaxLength(150);
             builder.Property(x => x.MerkleProofJson).HasMaxLength(4000);
+            builder.Property(x => x.PlainDataJson).IsRequired().HasColumnType("nvarchar(max)");
+            builder.Property(x => x.Salt).IsRequired().HasMaxLength(100);
+            builder.Property(x => x.Major).IsRequired().HasMaxLength(200);
+            builder.Property(x => x.Classification).IsRequired().HasMaxLength(100);
             builder.Property(x => x.EffectiveAt).IsRequired();
 
             // Setup relationship to Degree

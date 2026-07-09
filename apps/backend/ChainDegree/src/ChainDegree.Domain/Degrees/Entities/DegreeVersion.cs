@@ -11,6 +11,10 @@ namespace ChainDegree.Core.Domain.Degrees.Entities
         public string CurrentHash { get; private set; } = null!;
         public string BlockchainTxHash { get; private set; } = null!;
         public string? MerkleProofJson { get; private set; } // TODO: Cân nhắc lưu trữ thêm MerkleProof để Verifier sử dụng sau này
+        public string PlainDataJson { get; private set; } = null!;
+        public string Salt { get; private set; } = null!;
+        public string Major { get; private set; } = null!;
+        public string Classification { get; private set; } = null!;
         public DateTime EffectiveAt { get; private set; }
 
         private DegreeVersion(
@@ -20,7 +24,12 @@ namespace ChainDegree.Core.Domain.Degrees.Entities
             string previousHash,
             string currentHash,
             string blockchainTxHash,
-            DateTime effectiveAt)
+            DateTime effectiveAt,
+            string plainDataJson,
+            string salt,
+            string major,
+            string classification,
+            string? merkleProofJson)
         {
             Id = id;
             DegreeId = degreeId;
@@ -29,6 +38,11 @@ namespace ChainDegree.Core.Domain.Degrees.Entities
             CurrentHash = currentHash;
             BlockchainTxHash = blockchainTxHash;
             EffectiveAt = effectiveAt;
+            PlainDataJson = plainDataJson;
+            Salt = salt;
+            Major = major;
+            Classification = classification;
+            MerkleProofJson = merkleProofJson;
             CreatedAt = DateTime.UtcNow;
         }
 
@@ -40,7 +54,12 @@ namespace ChainDegree.Core.Domain.Degrees.Entities
             string previousHash,
             string currentHash,
             string blockchainTxHash,
-            DateTime effectiveAt)
+            DateTime effectiveAt,
+            string plainDataJson,
+            string salt,
+            string major,
+            string classification,
+            string? merkleProofJson)
         {
             return new DegreeVersion(
                 Guid.NewGuid(),
@@ -49,7 +68,12 @@ namespace ChainDegree.Core.Domain.Degrees.Entities
                 previousHash,
                 currentHash,
                 blockchainTxHash,
-                effectiveAt);
+                effectiveAt,
+                plainDataJson,
+                salt,
+                major,
+                classification,
+                merkleProofJson);
         }
     }
 }
