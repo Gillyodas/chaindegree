@@ -87,12 +87,28 @@ namespace ChainDegree.Core.Application.Degrees.Queries.VerifyDegree
             }
 
             // 3. Local Integrity Check
+            var originalIssuedAt = snapshot.IssuedAt;
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(snapshot.PlainDataJson);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("issuedAt", out var prop) && DateTime.TryParse(prop.GetString(), out var parsedDate))
+                {
+                    originalIssuedAt = parsedDate;
+                }
+                else if (root.TryGetProperty("IssuedAt", out var prop2) && DateTime.TryParse(prop2.GetString(), out var parsedDate2))
+                {
+                    originalIssuedAt = parsedDate2;
+                }
+            }
+            catch { }
+
             var degreeData = new DegreeData(
                 request.DegreeCode,
                 snapshot.StudentId,
                 snapshot.Major,
                 snapshot.Classification,
-                snapshot.IssuedAt
+                originalIssuedAt
             );
 
             string recalculatedHash;
@@ -194,7 +210,7 @@ namespace ChainDegree.Core.Application.Degrees.Queries.VerifyDegree
             await _behaviorLogService.LogAsync(
                 ActionTypeEnum.VERIFY_DEGREE,
                 "DEGREES",
-                targetId: Guid.Empty, // Public verification does not point to specific mutable record creation
+                targetId: Guid.Parse("00000000-0000-0000-0000-000000000002"), // Fixed sentinel ID for verification attempts
                 oldValuesJson: null,
                 newValuesJson: logDetails,
                 ct);

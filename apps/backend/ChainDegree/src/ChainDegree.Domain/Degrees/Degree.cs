@@ -33,7 +33,8 @@ namespace ChainDegree.Core.Domain.Degrees
             Guid studentId,
             string major,
             string classification,
-            CryptoSnapshot cryptoData)
+            CryptoSnapshot cryptoData,
+            DateTime? issuedAt = null)
         {
             Id = id;
             DegreeCode = degreeCode;
@@ -44,7 +45,7 @@ namespace ChainDegree.Core.Domain.Degrees
             Classification = classification;
             CryptoData = cryptoData;
             Status = StatusEnum.Pending_Confirmation; // Mặc định khi tạo mới là chờ gom lô lên chuỗi
-            IssuedAt = DateTime.UtcNow;
+            IssuedAt = issuedAt ?? DateTime.UtcNow;
             CurrentVersion = 1;
         }
 
@@ -82,6 +83,23 @@ namespace ChainDegree.Core.Domain.Degrees
             Guid degreeId = Guid.NewGuid();
             string degreeCode = GenerateDegreeCode(totalDegree);
 
+            // Parse IssuedAt from PlainDataJson to synchronize with calculated hash
+            DateTime? issuedAt = null;
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(cryptoData.PlainDataJson);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("issuedAt", out var prop) && DateTime.TryParse(prop.GetString(), out var parsedDate))
+                {
+                    issuedAt = parsedDate;
+                }
+                else if (root.TryGetProperty("IssuedAt", out var prop2) && DateTime.TryParse(prop2.GetString(), out var parsedDate2))
+                {
+                    issuedAt = parsedDate2;
+                }
+            }
+            catch { }
+
             var newDegree = new Degree(
                 degreeId,
                 degreeCode,
@@ -90,7 +108,8 @@ namespace ChainDegree.Core.Domain.Degrees
                 studentId,
                 major,
                 classification,
-                cryptoData);
+                cryptoData,
+                issuedAt);
 
             // Raise domain event
             newDegree.RaiseDomainEvent(new DegreeCreatedEvent(newDegree.Id, newDegree.InstitutionId, newDegree.StudentId, newDegree.DegreeCode));

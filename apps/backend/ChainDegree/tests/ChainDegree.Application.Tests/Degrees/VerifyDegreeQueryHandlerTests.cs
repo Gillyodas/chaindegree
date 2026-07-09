@@ -63,7 +63,7 @@ namespace ChainDegree.Application.Tests.Degrees
             _mockBehaviorLog.Verify(b => b.LogAsync(
                 ActionTypeEnum.VERIFY_DEGREE,
                 "DEGREES",
-                Guid.Empty,
+                Guid.Parse("00000000-0000-0000-0000-000000000002"),
                 null,
                 It.Is<string>(json => json.Contains("DegreeNotFound")),
                 It.IsAny<CancellationToken>()), Times.Once);
@@ -310,7 +310,7 @@ namespace ChainDegree.Application.Tests.Degrees
             _mockBehaviorLog.Verify(b => b.LogAsync(
                 ActionTypeEnum.VERIFY_DEGREE,
                 "DEGREES",
-                Guid.Empty,
+                Guid.Parse("00000000-0000-0000-0000-000000000002"),
                 null,
                 It.Is<string>(json => json.Contains("Verified")),
                 It.IsAny<CancellationToken>()), Times.Once);
