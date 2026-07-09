@@ -6,11 +6,13 @@ using ChainDegree.Core.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Scalar.AspNetCore;
 
+using System.Threading.Tasks;
+
 namespace ChainDegree.API
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +25,17 @@ namespace ChainDegree.API
             // Register application services
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(builder.Configuration);
+
+            // Register CORS for frontend integration
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
 
             // Register config options
             builder.Services.Configure<JwtOptions>(
@@ -61,14 +74,41 @@ namespace ChainDegree.API
 
             app.UseMiddleware<ChainDegree.API.Middleware.CorrelationIdMiddleware>();
 
+            app.UseCors("AllowAll");
+
             if (app.Environment.IsDevelopment())
             {
+                // Fake Auth Middleware to auto-populate ClaimsPrincipal based on dev headers or fallback defaults
+                app.Use(async (context, next) =>
+                {
+                    var role = context.Request.Headers.TryGetValue("X-Role", out var r) ? r.ToString() : "Registrar";
+                    var userId = context.Request.Headers.TryGetValue("X-User-Id", out var u) ? u.ToString() : "00000000-0000-0000-0000-000000000001";
+                    var instId = context.Request.Headers.TryGetValue("X-Institution-Id", out var i) ? i.ToString() : "11111111-1111-1111-1111-111111111111";
+
+                    var identity = new System.Security.Claims.ClaimsIdentity(new[]
+                    {
+                        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, userId),
+                        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, role),
+                        new System.Security.Claims.Claim("InstitutionId", instId)
+                    }, "FakeAuth");
+
+                    context.User = new System.Security.Claims.ClaimsPrincipal(identity);
+                    await next();
+                });
+
                 app.MapOpenApi();
 
                 app.MapScalarApiReference(options =>
                 {
                     options.Title = "ChainDegree API";
                 });
+
+                // Auto Seed Development Database
+                using (var scope = app.Services.CreateScope())
+                {
+                    var context = scope.ServiceProvider.GetRequiredService<ChainDegreeDbContext>();
+                    await ChainDegreeDbSeeder.SeedAsync(context);
+                }
             }
 
             app.UseHttpsRedirection();
