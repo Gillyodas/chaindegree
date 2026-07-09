@@ -9,6 +9,8 @@ using ChainDegree.Core.Application.Degrees.Commands.RetryDegreeConfirmation;
 using ChainDegree.Core.Application.Degrees.Queries.GetBatchStatus;
 using ChainDegree.Core.Application.Degrees.Commands.RevokeDegree;
 using ChainDegree.Core.Application.Degrees.Commands.UpdateDegree;
+using ChainDegree.Core.Application.Degrees.Queries.VerifyDegree;
+using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
 using ChainDegree.Core.Application.Abstractions.Queries;
 using ChainDegree.SharedKernel.Result;
 using MediatR;
@@ -187,6 +189,112 @@ namespace ChainDegree.API.Tests.Controllers
             var acceptedResult = Assert.IsType<AcceptedResult>(result);
             var returnedValue = Assert.IsType<UpdateDegreeResponse>(acceptedResult.Value);
             Assert.False(returnedValue.IsShortcut);
+        }
+
+        [Fact]
+        public async Task VerifyDegree_WithValidSnapshot_ReturnsOk()
+        {
+            // Arrange
+            var request = new VerifyDegreeRequest("DEG-2026-000001", null, null);
+            var response = new VerifyDegreeResponse(
+                Verified: true,
+                Status: "Confirmed",
+                DegreeCode: "DEG-2026-000001",
+                Version: 1,
+                StudentFullName: "Nguyen Van A",
+                Major: "IT",
+                Classification: "Gioi",
+                IssuedAt: DateTime.UtcNow,
+                Blockchain: new BlockchainDetails("0x123", 100, "0xabc", "proof")
+            );
+
+            _mockSender.Setup(s => s.Send(It.IsAny<VerifyDegreeQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<VerifyDegreeResponse>.Success(response));
+
+            // Act
+            var result = await _controller.VerifyDegree(request, CancellationToken.None);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedValue = Assert.IsType<VerifyDegreeResponse>(okResult.Value);
+            Assert.True(returnedValue.Verified);
+            Assert.Equal("Confirmed", returnedValue.Status);
+        }
+
+        [Fact]
+        public async Task VerifyDegree_WithCryptoMismatch_ReturnsUnprocessableEntity()
+        {
+            // Arrange
+            var request = new VerifyDegreeRequest("DEG-2026-000001", null, null);
+            _mockSender.Setup(s => s.Send(It.IsAny<VerifyDegreeQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<VerifyDegreeResponse>.Failure(DegreeErrors.CryptoHashMismatch));
+
+            // Act
+            var result = await _controller.VerifyDegree(request, CancellationToken.None);
+
+            // Assert
+            var unprocessableResult = Assert.IsType<UnprocessableEntityObjectResult>(result);
+            Assert.NotNull(unprocessableResult.Value);
+            var errorProp = unprocessableResult.Value.GetType().GetProperty("error");
+            Assert.NotNull(errorProp);
+            Assert.Equal("CRYPTO_HASH_MISMATCH", errorProp.GetValue(unprocessableResult.Value));
+        }
+
+        [Fact]
+        public async Task VerifyDegree_WithBlockchainInvalid_ReturnsUnprocessableEntity()
+        {
+            // Arrange
+            var request = new VerifyDegreeRequest("DEG-2026-000001", null, null);
+            _mockSender.Setup(s => s.Send(It.IsAny<VerifyDegreeQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<VerifyDegreeResponse>.Failure(DegreeErrors.BlockchainInvalid));
+
+            // Act
+            var result = await _controller.VerifyDegree(request, CancellationToken.None);
+
+            // Assert
+            var unprocessableResult = Assert.IsType<UnprocessableEntityObjectResult>(result);
+            Assert.NotNull(unprocessableResult.Value);
+            var errorProp = unprocessableResult.Value.GetType().GetProperty("error");
+            Assert.NotNull(errorProp);
+            Assert.Equal("BLOCKCHAIN_INVALID", errorProp.GetValue(unprocessableResult.Value));
+        }
+
+        [Fact]
+        public async Task VerifyDegree_WithNotFound_ReturnsNotFound()
+        {
+            // Arrange
+            var request = new VerifyDegreeRequest("DEG-2026-000001", null, null);
+            _mockSender.Setup(s => s.Send(It.IsAny<VerifyDegreeQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<VerifyDegreeResponse>.Failure(DegreeErrors.NotFound));
+
+            // Act
+            var result = await _controller.VerifyDegree(request, CancellationToken.None);
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.NotNull(notFoundResult.Value);
+            var errorProp = notFoundResult.Value.GetType().GetProperty("error");
+            Assert.NotNull(errorProp);
+            Assert.Equal("DEGREE_NOT_FOUND", errorProp.GetValue(notFoundResult.Value));
+        }
+
+        [Fact]
+        public async Task VerifyDegree_WithUnsupportedVersion_ReturnsNotFound()
+        {
+            // Arrange
+            var request = new VerifyDegreeRequest("DEG-2026-000001", 3, null);
+            _mockSender.Setup(s => s.Send(It.IsAny<VerifyDegreeQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<VerifyDegreeResponse>.Failure(DegreeErrors.UnsupportedVersion));
+
+            // Act
+            var result = await _controller.VerifyDegree(request, CancellationToken.None);
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+            Assert.NotNull(notFoundResult.Value);
+            var errorProp = notFoundResult.Value.GetType().GetProperty("error");
+            Assert.NotNull(errorProp);
+            Assert.Equal("UNSUPPORTED_VERSION", errorProp.GetValue(notFoundResult.Value));
         }
     }
 }
