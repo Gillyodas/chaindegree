@@ -25,26 +25,26 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             var studentAUserId = Guid.Parse("22222222-2222-2222-2222-222222222222");
             var studentBUserId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
-            // Clean up any old misaligned rows
-            var oldRegistrar = await context.Registrars.FirstOrDefaultAsync(x => x.UserId == registrarUserId);
+            // Clean up any old misaligned rows via raw SQL to bypass EF soft-delete logic
+            var oldRegistrar = await context.Registrars.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.UserId == registrarUserId);
             if (oldRegistrar != null && oldRegistrar.Id != registrarUserId)
             {
-                context.Registrars.Remove(oldRegistrar);
-                await context.SaveChangesAsync();
+                await context.Database.ExecuteSqlAsync($"DELETE FROM DEGREES WHERE SignedByRegistrarId = {oldRegistrar.Id}");
+                await context.Database.ExecuteSqlAsync($"DELETE FROM REGISTRARS WHERE UserId = {registrarUserId}");
             }
 
-            var oldStudentA = await context.Students.FirstOrDefaultAsync(x => x.Email == "nguyenvana@gmail.com");
+            var oldStudentA = await context.Students.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == "nguyenvana@gmail.com");
             if (oldStudentA != null && oldStudentA.Id != studentAUserId)
             {
-                context.Students.Remove(oldStudentA);
-                await context.SaveChangesAsync();
+                await context.Database.ExecuteSqlAsync($"DELETE FROM DEGREES WHERE StudentId = {oldStudentA.Id}");
+                await context.Database.ExecuteSqlAsync($"DELETE FROM STUDENTS WHERE Email = 'nguyenvana@gmail.com'");
             }
 
-            var oldStudentB = await context.Students.FirstOrDefaultAsync(x => x.Email == "tranthib@gmail.com");
+            var oldStudentB = await context.Students.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Email == "tranthib@gmail.com");
             if (oldStudentB != null && oldStudentB.Id != studentBUserId)
             {
-                context.Students.Remove(oldStudentB);
-                await context.SaveChangesAsync();
+                await context.Database.ExecuteSqlAsync($"DELETE FROM DEGREES WHERE StudentId = {oldStudentB.Id}");
+                await context.Database.ExecuteSqlAsync($"DELETE FROM STUDENTS WHERE Email = 'tranthib@gmail.com'");
             }
 
             // 1. Seed AuthUsers (to avoid FK constraint violations)
