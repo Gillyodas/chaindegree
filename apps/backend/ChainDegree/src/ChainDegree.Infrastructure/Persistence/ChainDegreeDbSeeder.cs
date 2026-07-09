@@ -25,6 +25,28 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             var studentAUserId = Guid.Parse("22222222-2222-2222-2222-222222222222");
             var studentBUserId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
+            // Clean up any old misaligned rows
+            var oldRegistrar = await context.Registrars.FirstOrDefaultAsync(x => x.UserId == registrarUserId);
+            if (oldRegistrar != null && oldRegistrar.Id != registrarUserId)
+            {
+                context.Registrars.Remove(oldRegistrar);
+                await context.SaveChangesAsync();
+            }
+
+            var oldStudentA = await context.Students.FirstOrDefaultAsync(x => x.Email == "nguyenvana@gmail.com");
+            if (oldStudentA != null && oldStudentA.Id != studentAUserId)
+            {
+                context.Students.Remove(oldStudentA);
+                await context.SaveChangesAsync();
+            }
+
+            var oldStudentB = await context.Students.FirstOrDefaultAsync(x => x.Email == "tranthib@gmail.com");
+            if (oldStudentB != null && oldStudentB.Id != studentBUserId)
+            {
+                context.Students.Remove(oldStudentB);
+                await context.SaveChangesAsync();
+            }
+
             // 1. Seed AuthUsers (to avoid FK constraint violations)
             var hasRegistrarUser = await context.AuthUsers.AnyAsync(x => x.Id == registrarUserId);
             if (!hasRegistrarUser)
@@ -59,33 +81,30 @@ namespace ChainDegree.Core.Infrastructure.Persistence
                 await context.SaveChangesAsync();
             }
 
-            // 3. Seed Registrar
+            // 3. Seed Registrar (Set Id equal to registrarUserId to match ICurrentUserAccessor.UserId)
             var hasReg = await context.Registrars.AnyAsync(x => x.UserId == registrarUserId);
             if (!hasReg)
             {
                 var registrar = Registrar.Create(instId, registrarUserId, "UIT-REG-001", "Học vụ UIT");
-                SetId(registrar, Guid.NewGuid());
+                SetId(registrar, registrarUserId); 
                 context.Registrars.Add(registrar);
                 await context.SaveChangesAsync();
             }
 
-            // 4. Seed Students
-            var studentAId = Guid.Parse("a2222222-2222-2222-2222-222222222222");
-            var studentBId = Guid.Parse("b3333333-3333-3333-3333-333333333333");
-
-            var hasStudentA = await context.Students.AnyAsync(x => x.Id == studentAId);
+            // 4. Seed Students (Set Id equal to UserIds to avoid FK issues when frontend requests with Student User IDs)
+            var hasStudentA = await context.Students.AnyAsync(x => x.Id == studentAUserId);
             if (!hasStudentA)
             {
                 var studentA = Student.Create("079012345678", "Nguyễn Văn A", "nguyenvana@gmail.com", studentAUserId).Value;
-                SetId(studentA, studentAId);
+                SetId(studentA, studentAUserId);
                 context.Students.Add(studentA);
             }
 
-            var hasStudentB = await context.Students.AnyAsync(x => x.Id == studentBId);
+            var hasStudentB = await context.Students.AnyAsync(x => x.Id == studentBUserId);
             if (!hasStudentB)
             {
                 var studentB = Student.Create("079087654321", "Trần Thị B", "tranthib@gmail.com", studentBUserId).Value;
-                SetId(studentB, studentBId);
+                SetId(studentB, studentBUserId);
                 context.Students.Add(studentB);
             }
 
