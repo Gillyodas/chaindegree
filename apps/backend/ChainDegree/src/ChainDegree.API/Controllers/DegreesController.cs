@@ -11,6 +11,8 @@ using ChainDegree.Core.Application.Degrees.Commands.RetryDegreeConfirmation;
 using ChainDegree.Core.Application.Degrees.Queries.GetBatchStatus;
 using ChainDegree.Core.Application.Degrees.Commands.UpdateDegree;
 using ChainDegree.Core.Application.Degrees.Commands.RevokeDegree;
+using ChainDegree.Core.Application.Degrees.Queries.VerifyDegree;
+using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -148,6 +150,43 @@ namespace ChainDegree.API.Controllers
             }
 
             return Accepted(result.Value);
+        }
+
+        [HttpPost("verify")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(VerifyDegreeResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> VerifyDegree(
+            [FromBody] VerifyDegreeRequest request,
+            CancellationToken ct)
+        {
+            var query = new VerifyDegreeQuery(request.DegreeCode, request.Version, request.IssuedAt);
+            var result = await _sender.Send(query, ct);
+
+            if (result.IsFailure)
+            {
+                if (result.Error == DegreeErrors.CryptoHashMismatch)
+                {
+                    return UnprocessableEntity(new { error = "CRYPTO_HASH_MISMATCH" });
+                }
+                if (result.Error == DegreeErrors.BlockchainInvalid)
+                {
+                    return UnprocessableEntity(new { error = "BLOCKCHAIN_INVALID" });
+                }
+                if (result.Error == DegreeErrors.NotFound)
+                {
+                    return NotFound(new { error = "DEGREE_NOT_FOUND" });
+                }
+                if (result.Error == DegreeErrors.UnsupportedVersion)
+                {
+                    return NotFound(new { error = "UNSUPPORTED_VERSION" });
+                }
+
+                return HandleFailure(result);
+            }
+
+            return Ok(result.Value);
         }
     }
 }
