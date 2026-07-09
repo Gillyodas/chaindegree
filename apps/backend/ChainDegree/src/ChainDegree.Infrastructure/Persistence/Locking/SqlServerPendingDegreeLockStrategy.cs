@@ -26,6 +26,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Locking
 
             return await dbContext.Degrees
                 .FromSqlRaw(query, batchSize, System.DateTime.UtcNow)
+                .IgnoreQueryFilters()
                 .ToListAsync(ct);
         }
     }
