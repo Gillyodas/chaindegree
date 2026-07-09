@@ -48,5 +48,14 @@ namespace ChainDegree.SharedKernel.DomainErrors.Degrees.Degree
 
         public static readonly Error CannotRetry =
             Error.Validation("Degree.CannotRetry", "Only degrees with Confirmation_Error status can be retried.");
+
+        public static readonly Error CryptoHashMismatch =
+            Error.Validation("Degree.CryptoHashMismatch", "The recalculated hash does not match the stored local hash.");
+
+        public static readonly Error BlockchainInvalid =
+            Error.Validation("Degree.BlockchainInvalid", "The stored hash does not match the anchored Merkle root on the blockchain.");
+
+        public static readonly Error UnsupportedVersion =
+            Error.NotFound("Degree.UnsupportedVersion", "The requested version of the degree does not exist.");
     }
 }

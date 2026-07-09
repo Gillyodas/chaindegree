@@ -218,36 +218,48 @@ A registrar can update or revoke degrees through the UI with appropriate async/s
 
 ## Phase 3: Public Degree Verification — End To End (US-3 / UC-3)
 
-Deliver the public verification portal.
+Deliver the public verification portal with snapshot-based, version-aware verification.
 
 ### Scope
 
 #### Domain Layer
 
-- Verification result value objects: `Verified`, `Revoked`, `CryptoHashMismatch`, `BlockchainInvalid`.
+- Verification result value objects: `Verified`, `Revoked`, `CryptoHashMismatch`, `BlockchainInvalid`, `DegreeNotFound`, `UnsupportedVersion`.
+- Verification snapshot structure: representing an immutable snapshot to verify (DataHash, Salt, PlainDataJson, TxHash, MerkleProofJson, Version, Status).
+- Invariants:
+  - Verification must be deterministic and never mutate state.
+  - The system must verify historical versions independently from the latest version.
+  - Verification of historical versions must read from `DegreeVersion` rather than `Degree` to avoid reading overwritten data.
 
 #### Application Layer
 
 - Use case: `VerifyDegreeQuery` / handler.
+- Input payload (QR Payload): `DegreeCode`, `Version?`, `IssuedAt?`.
 - Dual-verification pipeline:
-  1. Fetch local degree data, salt, and hash from database.
-  2. Recalculate `Hash(PlainData + Salt)` and compare against local stored hash.
-  3. Validate against blockchain Merkle root using Merkle proof.
-- Return verified, revoked, or fraud/mismatch result.
+  1. **Resolve Snapshot**: Resolve based on version parameter. If version is specified, fetch from `DegreeVersion`; if null, fetch current version from `Degree`.
+  2. **Status Check**: If status is `Revoked`, immediately return `Revoked`.
+  3. **Local Integrity**: Fetch local degree data, salt, and hash from snapshot, recalculate `Hash(PlainData + Salt)` and compare against stored hash.
+  4. **Blockchain Integrity**: Validate against blockchain Merkle root using Merkle proof and target transaction hash.
+- Return verified, revoked, mismatch, invalid, not found, or unsupported version result.
 
 #### Infrastructure Layer
 
-- Blockchain query: fetch Merkle root from smart contract.
+- Blockchain query: fetch anchored Merkle root from smart contract event logs or states using `TxHash`.
+- Merkle proof resolution helper:
+  - For current version (where `version` is null or equal to `CurrentVersion`): resolve proof from `BatchDegreeRecord` (and root from `BatchRecord`).
+  - For historical version (where `version < CurrentVersion`): resolve proof from `DegreeVersion.MerkleProofJson` and root by mapping `BlockchainTxHash`.
 - Merkle proof validation.
 
 #### API Layer
 
 - Public endpoint: `POST /api/v1/institutions/degrees/verify`.
-- No authentication required.
+- No authentication required (`[AllowAnonymous]`).
 - Success: `200 OK` with `verified: true`, blockchain details.
+- Revoked: `200 OK` with `{ verified: false, status: "Revoked" }`.
 - Hash mismatch: `422 CRYPTO_HASH_MISMATCH`.
 - Blockchain invalid: `422 BLOCKCHAIN_INVALID`.
-- Revoked degree: clear revoked result.
+- Degree not found: `404 DEGREE_NOT_FOUND`.
+- Unsupported version: `404 UNSUPPORTED_VERSION`.
 
 #### UI Layer
 
@@ -265,10 +277,12 @@ Verification only detects status and integrity. It does not file complaints, mut
 
 - Public users can verify without login.
 - Valid confirmed degree returns `200 OK` with `verified: true`.
-- Revoked degree returns a clear revoked result.
+- Revoked degree (either current or historical version) returns a clear revoked result.
 - Modified database/plain data causes `422 CRYPTO_HASH_MISMATCH`.
 - Invalid blockchain/Merkle proof causes `422 BLOCKCHAIN_INVALID`.
-- Every lookup writes `VERIFY_DEGREE` behavior log, anonymous or identified.
+- Non-existent degree code returns `404 DEGREE_NOT_FOUND`.
+- Non-existent version request returns `404 UNSUPPORTED_VERSION`.
+- Every lookup writes `VERIFY_DEGREE` behavior log containing the `Result` and `VersionVerified`.
 
 ### Deliverable
 

@@ -10,6 +10,10 @@ namespace ChainDegree.Core.Application.Abstractions.Blockchain
             string merkleRoot,
             Guid batchId,
             CancellationToken ct = default);
+
+        Task<string?> GetAnchoredMerkleRootAsync(
+            string txHash,
+            CancellationToken ct = default);
     }
 
     public record BlockchainTransactionResult(
