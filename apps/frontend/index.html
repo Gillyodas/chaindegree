@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChainDegree - Verification & Administration Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: rgba(22, 28, 45, 0.6);
+            --bg-surface-hover: rgba(30, 41, 59, 0.8);
+            --primary: #4f46e5;
+            --primary-glow: rgba(79, 70, 229, 0.4);
+            --secondary: #06b6d4;
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.2);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.2);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100/vh;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            padding-bottom: 50px;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #a5b4fc, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo span {
+            font-size: 12px;
+            background: rgba(79, 70, 229, 0.2);
+            color: #a5b4fc;
+            padding: 4px 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(79, 70, 229, 0.3);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 20px;
+            font-family: inherit;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--text-main);
+            background: var(--primary);
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Glass Cards */
+        .card {
+            background: var(--bg-surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--primary-glow);
+            opacity: 0.95;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+        .btn-danger:hover {
+            box-shadow: 0 4px 12px var(--danger-glow);
+        }
+
+        /* Layout styles */
+        .flex-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .col-6 {
+            flex: 1;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .badge-confirmed {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Dynamic Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Verification Card output */
+        .verification-card {
+            border-width: 2px;
+            transition: all 0.5s ease;
+        }
+
+        .verify-verified {
+            border-color: var(--success) !important;
+            box-shadow: 0 0 20px var(--success-glow);
+        }
+
+        .verify-revoked {
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 20px var(--danger-glow);
+        }
+
+        .verify-mismatch {
+            border-color: var(--warning) !important;
+            box-shadow: 0 0 20px var(--warning-glow);
+            animation: pulse-orange 2s infinite;
+        }
+
+        .verify-invalid {
+            border-color: #f43f5e !important;
+            box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.6); }
+            100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.6); }
+            100% { box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
+        }
+
+        /* Toast notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background: #1e293b;
+            border-left: 4px solid var(--primary);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            margin-top: 10px;
+            min-width: 300px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #111827;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 500px;
+            max-width: 90%;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">ChainDegree <span>v3.0 - Verification</span></div>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('verify-tab')">Public Verification</button>
+                <button class="tab-btn" onclick="switchTab('issue-tab')">Registrar Portal</button>
+                <button class="tab-btn" onclick="switchTab('settings-tab')">Dev & DB Settings</button>
+            </div>
+        </header>
+
+        <!-- Toast Notifications Area -->
+        <div class="toast-container" id="toastContainer"></div>
+
+        <!-- TAB 1: PUBLIC VERIFICATION -->
+        <div id="verify-tab" class="tab-content active">
+            <div class="flex-row">
+                <div class="col-6">
+                    <div class="card">
+                        <h2 style="margin-bottom: 20px;">Xác Thực Văn Bằng Công Khai (US-3)</h2>
+                        <form id="verifyForm" onsubmit="handleVerify(event)">
+                            <div class="form-group">
+                                <label for="v_code">Mã Số Bằng (Degree Code)</label>
+                                <input type="text" id="v_code" placeholder="Ví dụ: DEG-2026-000001" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="v_version">Phiên Bản (Version) - Tuỳ chọn</label>
+                                <input type="number" id="v_version" placeholder="Để trống nếu muốn xác thực phiên bản mới nhất">
+                            </div>
+                            <div class="form-group">
+                                <label for="v_issuedAt">Ngày Phát Hành (Cross-check IssuedAt) - Tuỳ chọn</label>
+                                <input type="date" id="v_issuedAt">
+                            </div>
+                            <button type="submit" class="btn" style="width: 100%;">
+                                Kiểm tra & Xác Thực
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <!-- Result Display Area -->
+                    <div id="verifyResultContainer" style="display: none;">
+                        <div class="card verification-card" id="vCard">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+                                <div>
+                                    <h3 style="font-size: 20px;" id="vResultTitle">Kết quả xác thực</h3>
+                                    <p id="vResultSubtitle" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;"></p>
+                                </div>
+                                <span class="badge" id="vResultBadge">CONFIRMED</span>
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label>Họ và Tên Sinh Viên</label>
+                                <div style="font-size: 16px; font-weight: 600;" id="vStudentName">-</div>
+                            </div>
+                            <div class="flex-row" style="margin-bottom: 15px;">
+                                <div style="flex: 1;">
+                                    <label>Ngành Học</label>
+                                    <div style="font-size: 15px; font-weight: 500;" id="vMajor">-</div>
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>Xếp Loại</label>
+                                    <div style="font-size: 15px; font-weight: 500;" id="vClassification">-</div>
+                                </div>
+                            </div>
+                            <div class="flex-row" style="margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+                                <div style="flex: 1;">
+                                    <label>Mã Văn Bằng</label>
+                                    <div style="font-size: 14px; font-family: monospace;" id="vDegreeCode">-</div>
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>Phiên Bản</label>
+                                    <div style="font-size: 14px;" id="vVersionNum">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Blockchain Data Section -->
+                            <div id="vBlockchainSection" style="display: block;">
+                                <h4 style="font-size: 14px; margin-bottom: 10px; color: var(--secondary);">Thông Tin Chuỗi (Besu QBFT Anchored)</h4>
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 11px;">Mã Giao Dịch (TxHash)</label>
+                                    <div style="font-size: 12px; font-family: monospace; word-break: break-all;" id="vTxHash">-</div>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 10px;">
+                                    <label style="font-size: 11px;">Merkle Root</label>
+                                    <div style="font-size: 12px; font-family: monospace; word-break: break-all;" id="vMerkleRoot">-</div>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="font-size: 11px;">Bằng chứng Merkle Proof (Đã khớp)</label>
+                                    <textarea style="font-size: 11px; font-family: monospace; height: 60px; background: rgba(0,0,0,0.3); resize: none;" id="vMerkleProof" readonly></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Placeholder -->
+                    <div id="verifyPlaceholder" class="card" style="display: flex; height: 100%; align-items: center; justify-content: center; text-align: center; color: var(--text-muted); border-style: dashed;">
+                        <div>
+                            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom: 10px; stroke-width: 1.5; opacity: 0.5;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <p>Kết quả xác thực chéo (Hash & Blockchain) sẽ hiển thị tại đây.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: REGISTRAR PORTAL -->
+        <div id="issue-tab" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 10px;">Cấp Phát Bằng Cấp Mới (US-1)</h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+                    Registrar có thể thêm hàng loạt hồ sơ sinh viên vào hàng đợi bằng cách dùng nút <strong>[+] Thêm Sinh Viên</strong> trước khi gửi lên API để tạo lô (Batch) xử lý bất đồng bộ.
+                </p>
+
+                <form id="issueForm" onsubmit="handleIssue(event)">
+                    <div id="issueItemsContainer">
+                        <!-- Dynamic items will be added here -->
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" onclick="addIssueRow()">
+                            [+] Thêm Sinh Viên
+                        </button>
+                        <button type="submit" class="btn">
+                            Gửi Lên Hàng Đợi (POST)
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Batch Status Checker -->
+            <div class="flex-row">
+                <div class="col-6">
+                    <div class="card">
+                        <h2 style="margin-bottom: 20px;">Kiểm Tra Trạng Thái Lô (Get Batch Status)</h2>
+                        <div class="flex-row" style="gap: 10px; align-items: end;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label for="check_batch_id">Batch ID</label>
+                                <input type="text" id="check_batch_id" placeholder="Mã UUID của lô cần kiểm tra">
+                            </div>
+                            <button type="button" class="btn" onclick="checkBatchStatus()">Kiểm Tra</button>
+                        </div>
+                        <div id="batchStatusResult" style="margin-top: 20px; display: none; font-size: 13px; font-family: monospace; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;"></div>
+                    </div>
+                </div>
+
+                <div class="col-6">
+                    <div class="card">
+                        <h2 style="margin-bottom: 20px;">Cập Nhật / Thu Hồi Văn Bằng (US-2)</h2>
+                        <div class="form-group">
+                            <label for="u_id">ID Văn Bằng (Degree ID - Guid)</label>
+                            <input type="text" id="u_id" placeholder="Mã UUID của văn bằng cần sửa/thu hồi">
+                        </div>
+                        <div class="flex-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="u_major">Ngành Học Mới (Major)</label>
+                                <input type="text" id="u_major" placeholder="Ví dụ: Data Science">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="u_class">Xếp Loại Mới</label>
+                                <select id="u_class">
+                                    <option value="Xuất sắc">Xuất sắc</option>
+                                    <option value="Giỏi" selected>Giỏi</option>
+                                    <option value="Khá">Khá</option>
+                                    <option value="Trung bình">Trung bình</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="u_reason">Mã Lý Do (Reason Code)</label>
+                            <input type="text" id="u_reason" value="S-01" placeholder="Ví dụ: S-01 (Sai thông tin), R-01 (Thu hồi)">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" class="btn" style="flex: 1; background: var(--secondary);" onclick="handleUpdate()">Cập Nhật (PUT)</button>
+                            <button type="button" class="btn btn-danger" style="flex: 1;" onclick="handleRevoke()">Thu Hồi (POST)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: SETTINGS -->
+        <div id="settings-tab" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">Cấu Hình & Dữ Liệu Mẫu (Seed & Configuration)</h2>
+                
+                <div class="form-group">
+                    <label for="api_url">Địa chỉ API Server Base URL</label>
+                    <input type="text" id="api_url" value="http://localhost:5196" style="font-family: monospace;" onchange="saveApiUrl()">
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 10px; color: var(--secondary);">Danh Sách ID Mẫu Trong Hệ Thống</h3>
+                    <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 15px;">
+                        Các bản ghi này đã được seeder tự động ghi nhận khi C# API khởi động (ASPNETCORE_ENVIRONMENT = Development):
+                    </p>
+                    <table style="margin-top: 15px;">
+                        <thead>
+                            <tr>
+                                <th>Thực Thể</th>
+                                <th>ID Mẫu (Dùng để copy)</th>
+                                <th>Mô Tả</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Institution ID</strong></td>
+                                <td><code style="color: #a5b4fc;">11111111-1111-1111-1111-111111111111</code></td>
+                                <td>Đại học Công nghệ Thông tin (UIT)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Registrar User ID</strong></td>
+                                <td><code style="color: #a5b4fc;">00000000-0000-0000-0000-000000000001</code></td>
+                                <td>Học vụ UIT (có quyền cấp, sửa, thu hồi)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Student A (Nguyễn Văn A)</strong></td>
+                                <td><code style="color: #38bdf8;">22222222-2222-2222-2222-222222222222</code></td>
+                                <td>CCCD: 079012345678</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Student B (Trần Thị B)</strong></td>
+                                <td><code style="color: #38bdf8;">33333333-3333-3333-3333-333333333333</code></td>
+                                <td>CCCD: 079087654321</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CHO UPDATE/REVOKE (Để phát triển thêm nếu cần, hoặc test các API trực tiếp) -->
+    
+    <script>
+        // Init Api Url
+        if (!localStorage.getItem('api_url')) {
+            localStorage.setItem('api_url', 'http://localhost:5196');
+        }
+        document.getElementById('api_url').value = localStorage.getItem('api_url');
+
+        function saveApiUrl() {
+            localStorage.setItem('api_url', document.getElementById('api_url').value);
+            showToast('Đã lưu cấu hình API Url!');
+        }
+
+        function getApiUrl() {
+            return localStorage.getItem('api_url') || 'http://localhost:5196';
+        }
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            const event = window.event;
+            if (event) event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Add dynamically a row to Issue Degree Form
+        let rowCount = 0;
+        function addIssueRow() {
+            rowCount++;
+            const container = document.getElementById('issueItemsContainer');
+            const row = document.createElement('div');
+            row.className = 'card';
+            row.style.background = 'rgba(255, 255, 255, 0.02)';
+            row.style.padding = '15px';
+            row.style.marginBottom = '10px';
+            row.id = `row-${rowCount}`;
+
+            row.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                    <strong>Hồ sơ sinh viên #${rowCount}</strong>
+                    <button type="button" class="btn btn-secondary btn-danger" style="padding: 4px 10px; font-size:12px;" onclick="removeIssueRow(${rowCount})">Xoá</button>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group" style="flex:1;">
+                        <label>Student User ID (Từ Settings)</label>
+                        <input type="text" class="student-id" value="22222222-2222-2222-2222-222222222222" required>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Ngành Học (Major)</label>
+                        <input type="text" class="major" value="Software Engineering" required>
+                    </div>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group" style="flex:1;">
+                        <label>Xếp Loại (Classification)</label>
+                        <select class="classification">
+                            <option value="Xuất sắc">Xuất sắc</option>
+                            <option value="Giỏi" selected>Giỏi</option>
+                            <option value="Khá">Khá</option>
+                            <option value="Trung bình">Trung bình</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Ngày Phát Hành (IssuedAt)</label>
+                        <input type="date" class="issued-at" value="${new Date().toISOString().split('T')[0]}" required>
+                    </div>
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        function removeIssueRow(id) {
+            const row = document.getElementById(`row-${id}`);
+            if (row) row.remove();
+        }
+
+        // Init: add 1 row to form
+        addIssueRow();
+
+        // Toast Messages
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.borderLeftColor = type === 'success' ? 'var(--success)' : (type === 'error' ? 'var(--danger)' : 'var(--warning)');
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" style="background:transparent; border:none; color:white; font-weight:bold; margin-left:15px; cursor:pointer;">&times;</button>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                toast.style.transition = 'all 0.5s ease';
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
+        // API header builders
+        function getHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'X-Role': 'Registrar',
+                'X-User-Id': '00000000-0000-0000-0000-000000000001',
+                'X-Institution-Id': '11111111-1111-1111-1111-111111111111'
+            };
+        }
+
+        // Actions: POST Issue
+        async function handleIssue(event) {
+            event.preventDefault();
+            const container = document.getElementById('issueItemsContainer');
+            const rows = container.querySelectorAll('[id^="row-"]');
+            
+            if (rows.length === 0) {
+                showToast('Vui lòng thêm ít nhất một sinh viên!', 'error');
+                return;
+            }
+
+            const degrees = [];
+            rows.forEach(row => {
+                degrees.push({
+                    studentId: row.querySelector('.student-id').value,
+                    major: row.querySelector('.major').value,
+                    classification: row.querySelector('.classification').value,
+                    issuedAt: new Date(row.querySelector('.issued-at').value).toISOString()
+                });
+            });
+
+            const payload = { degrees };
+            const url = `${getApiUrl()}/api/v1/institutions/degrees`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 202) {
+                    const data = await response.json();
+                    showToast('Đã gửi yêu cầu cấp bằng thành công! (202 Accepted)');
+                    
+                    // Show batch status checker with the new batchId
+                    if (data.batchId) {
+                        document.getElementById('check_batch_id').value = data.batchId;
+                        checkBatchStatus();
+                    }
+                } else {
+                    const err = await response.json();
+                    showToast(`Lỗi: ${err.message || response.statusText}`, 'error');
+                }
+            } catch (ex) {
+                showToast(`Kết nối thất bại: ${ex.message}`, 'error');
+            }
+        }
+
+        // Actions: Get Batch Status
+        async function checkBatchStatus() {
+            const batchId = document.getElementById('check_batch_id').value;
+            if (!batchId) {
+                showToast('Vui lòng nhập Batch ID!', 'error');
+                return;
+            }
+
+            const url = `${getApiUrl()}/api/v1/institutions/degrees/batches/${batchId}`;
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: getHeaders()
+                });
+
+                const resultDiv = document.getElementById('batchStatusResult');
+                resultDiv.style.display = 'block';
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = JSON.stringify(data, null, 2);
+                    showToast('Cập nhật trạng thái lô thành công!');
+                } else {
+                    resultDiv.innerHTML = `Lỗi HTTP: ${response.status} - Batch không tồn tại hoặc không có quyền.`;
+                }
+            } catch (ex) {
+                showToast(`Không thể kết nối đến server: ${ex.message}`, 'error');
+            }
+        }
+
+        // Actions: Verification (US-3)
+        async function handleVerify(event) {
+            event.preventDefault();
+            const code = document.getElementById('v_code').value.trim();
+            const versionVal = document.getElementById('v_version').value;
+            const issuedAtVal = document.getElementById('v_issuedAt').value;
+
+            const payload = {
+                degreeCode: code,
+                version: versionVal ? parseInt(versionVal) : null,
+                issuedAt: issuedAtVal ? new Date(issuedAtVal).toISOString() : null
+            };
+
+            const url = `${getApiUrl()}/api/v1/institutions/degrees/verify`;
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // Toggle views
+                document.getElementById('verifyPlaceholder').style.display = 'none';
+                document.getElementById('verifyResultContainer').style.display = 'block';
+
+                const card = document.getElementById('vCard');
+                card.className = 'card verification-card'; // reset classes
+
+                const title = document.getElementById('vResultTitle');
+                const subtitle = document.getElementById('vResultSubtitle');
+                const badge = document.getElementById('vResultBadge');
+
+                const name = document.getElementById('vStudentName');
+                const major = document.getElementById('vMajor');
+                const classification = document.getElementById('vClassification');
+                const dCode = document.getElementById('vDegreeCode');
+                const vNum = document.getElementById('vVersionNum');
+
+                const txHash = document.getElementById('vTxHash');
+                const mRoot = document.getElementById('vMerkleRoot');
+                const mProof = document.getElementById('vMerkleProof');
+
+                if (response.status === 200) {
+                    const data = await response.json();
+                    
+                    if (data.verified) {
+                        card.classList.add('verify-verified');
+                        title.innerText = 'Xác Thực Thành Công';
+                        subtitle.innerText = 'Bằng cấp hợp lệ và dữ liệu toàn vẹn trên Blockchain.';
+                        badge.innerText = 'VERIFIED';
+                        badge.className = 'badge badge-confirmed';
+                    } else if (data.status === 'Revoked') {
+                        card.classList.add('verify-revoked');
+                        title.innerText = 'Văn Bằng Bị Thu Hồi';
+                        subtitle.innerText = 'Văn bằng này đã bị trường đại học thu hồi hiệu lực pháp lý.';
+                        badge.innerText = 'REVOKED';
+                        badge.className = 'badge badge-error';
+                    }
+
+                    name.innerText = data.studentFullName || '-';
+                    major.innerText = data.major || '-';
+                    classification.innerText = data.classification || '-';
+                    dCode.innerText = data.degreeCode || '-';
+                    vNum.innerText = data.version || '-';
+
+                    if (data.blockchain) {
+                        txHash.innerText = data.blockchain.txHash || '-';
+                        mRoot.innerText = data.blockchain.merkleRoot || '-';
+                        mProof.innerText = data.blockchain.merkleProofJson ? JSON.stringify(JSON.parse(data.blockchain.merkleProofJson), null, 2) : '-';
+                    } else {
+                        txHash.innerText = '-';
+                        mRoot.innerText = '-';
+                        mProof.innerText = '-';
+                    }
+
+                    showToast('Đã nhận kết quả xác thực!');
+                } 
+                else if (response.status === 422) {
+                    const err = await response.json();
+                    
+                    name.innerText = '-';
+                    major.innerText = '-';
+                    classification.innerText = '-';
+                    dCode.innerText = code;
+                    vNum.innerText = versionVal || '-';
+                    txHash.innerText = '-';
+                    mRoot.innerText = '-';
+                    mProof.innerText = '-';
+
+                    if (err.error === 'CRYPTO_HASH_MISMATCH') {
+                        card.classList.add('verify-mismatch');
+                        title.innerText = 'Sai Lệch Dữ Liệu Cục Bộ';
+                        subtitle.innerText = 'Cảnh báo! Dữ liệu văn bằng trong database cục bộ đã bị can thiệp trái phép (Crypto Hash Mismatch).';
+                        badge.innerText = 'TAMPERED';
+                        badge.className = 'badge badge-error';
+                        showToast('Dữ liệu đã bị can thiệp trái phép!', 'error');
+                    } else if (err.error === 'BLOCKCHAIN_INVALID') {
+                        card.classList.add('verify-invalid');
+                        title.innerText = 'Bằng Chứng Blockchain Không Hợp Lệ';
+                        subtitle.innerText = 'Cảnh báo! Không tìm thấy giao dịch neo dữ liệu hoặc Merkle Proof không khớp Merkle Root trên Hyperledger Besu.';
+                        badge.innerText = 'BLOCKCHAIN_INVALID';
+                        badge.className = 'badge badge-error';
+                        showToast('Blockchain xác thực thất bại!', 'error');
+                    }
+                } 
+                else if (response.status === 404) {
+                    const err = await response.json();
+                    card.classList.add('verify-revoked');
+                    
+                    name.innerText = '-';
+                    major.innerText = '-';
+                    classification.innerText = '-';
+                    dCode.innerText = code;
+                    vNum.innerText = versionVal || '-';
+                    txHash.innerText = '-';
+                    mRoot.innerText = '-';
+                    mProof.innerText = '-';
+
+                    if (err.error === 'DEGREE_NOT_FOUND') {
+                        title.innerText = 'Không Tìm Thấy';
+                        subtitle.innerText = 'Không tìm thấy hồ sơ văn bằng với mã số đã cho trong hệ thống.';
+                        badge.innerText = 'NOT FOUND';
+                        badge.className = 'badge badge-error';
+                        showToast('Mã bằng không tồn tại!', 'error');
+                    } else if (err.error === 'UNSUPPORTED_VERSION') {
+                        title.innerText = 'Phiên Bản Không Tồn Tại';
+                        subtitle.innerText = 'Hồ sơ văn bằng tồn tại nhưng không có số phiên bản này.';
+                        badge.innerText = 'VERSION ERROR';
+                        badge.className = 'badge badge-error';
+                        showToast('Phiên bản không tồn tại!', 'error');
+                    }
+                }
+            } catch (ex) {
+                showToast(`Kết nối đến server verify thất bại: ${ex.message}`, 'error');
+            }
+        }
+
+        // Actions: Update Degree (US-2)
+        async function handleUpdate() {
+            const id = document.getElementById('u_id').value.trim();
+            const major = document.getElementById('u_major').value.trim();
+            const classification = document.getElementById('u_class').value;
+            const reasonCode = document.getElementById('u_reason').value.trim();
+
+            if (!id || !major || !reasonCode) {
+                showToast('Vui lòng điền đầy đủ ID, Ngành Học và Mã Lý Do!', 'error');
+                return;
+            }
+
+            const url = `${getApiUrl()}/api/v1/institutions/degrees/${id}`;
+            const payload = { major, classification, reasonCode };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 200 || response.status === 202) {
+                    const data = await response.json();
+                    showToast(`Cập nhật thành công! Trạng thái: ${data.status}`);
+                } else {
+                    const err = await response.json();
+                    showToast(`Lỗi: ${err.message || response.statusText}`, 'error');
+                }
+            } catch (ex) {
+                showToast(`Kết nối thất bại: ${ex.message}`, 'error');
+            }
+        }
+
+        // Actions: Revoke Degree (US-2)
+        async function handleRevoke() {
+            const id = document.getElementById('u_id').value.trim();
+            const reasonCode = document.getElementById('u_reason').value.trim();
+
+            if (!id || !reasonCode) {
+                showToast('Vui lòng điền đầy đủ ID và Mã Lý Do!', 'error');
+                return;
+            }
+
+            const url = `${getApiUrl()}/api/v1/institutions/degrees/${id}/revoke`;
+            const payload = { reasonCode };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.status === 200 || response.status === 202) {
+                    const data = await response.json();
+                    showToast(`Thu hồi thành công! Trạng thái: ${data.status}`);
+                } else {
+                    const err = await response.json();
+                    showToast(`Lỗi: ${err.message || response.statusText}`, 'error');
+                }
+            } catch (ex) {
+                showToast(`Kết nối thất bại: ${ex.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
