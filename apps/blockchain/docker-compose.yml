@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   besu-node:
-    image: hyperledger/besu:latest
+    image: hyperledger/besu:23.10.2
     container_name: besu-dev-node
     command:
       - --network=dev
@@ -12,6 +12,8 @@ services:
       - --rpc-http-api=ETH,NET,WEB3,DEBUG,MINER,TXPOOL
       - --rpc-http-cors-origins=*
       - --host-allowlist=*
+      - --miner-enabled=true
+      - --miner-coinbase=0xfe3b557e8fb62b89f4916b721be55ceb828dbd73
     ports:
       - "8545:8545"
       - "30303:30303"
