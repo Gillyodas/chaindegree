@@ -5,7 +5,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 // Standard Besu dev private key (pre-funded in Besu dev network)
-const DEV_PRIVATE_KEY = "0xc87509a1c067bbde30f8340456276041d572619731780b91d7e6c33d1b17df0c";
+const DEV_PRIVATE_KEY = "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -22,6 +22,7 @@ const config: HardhatUserConfig = {
       url: process.env.RPC_URL || "http://127.0.0.1:8545",
       chainId: 1337,
       accounts: [process.env.PRIVATE_KEY || DEV_PRIVATE_KEY],
+      gasPrice: 2000000000,
     },
   },
 };
