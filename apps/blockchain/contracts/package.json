@@ -1,0 +1,17 @@
+{
+  "name": "degree-smart-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for ChainDegree anchoring",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.22.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
