@@ -13,16 +13,21 @@ Tài liệu này xác định lộ trình triển khai chi tiết cho các thàn
   - Viết `DegreeAnchor.sol`.
   - Thiết lập **Hardhat** làm toolchain chính.
   - Viết script deploy bằng Hardhat (tuyệt đối không deploy thủ công bằng Remix).
+    - *Lưu ý (Fail Fast):* Script deploy phải gọi `eth_chainId` để đảm bảo đang deploy đúng mạng lưới (VD: Expected 1337) trước khi thực hiện deploy.
+  - Viết Unit Tests bao phủ các case: Happy Path, Duplicate Batch, Invalid BatchId, Unauthorized Caller, Non-existing Batch.
 - **0.3. "Hello World" Transaction:** Chạy script Hardhat để deploy contract lên node Besu local và gọi thử hàm `anchorMerkleRoot`.
 
 **✅ Done Criteria (Smoke Test):**
 ```
-Deploy contract → Anchor test transaction → Read mapping `batches[batchId]` → Verify state → PASS
+Deploy contract → Verify contract exists (eth_getCode != 0x) → Anchor test transaction → Read mapping `batches[batchId]` → Verify state → PASS
 ```
 **📦 Deliverables:**
-- Môi trường Besu local (Docker)
+- Besu Docker Environment
 - `DegreeAnchor.sol`
-- Hardhat deployment script, configs & tests
+- Hardhat Config
+- Deployment Script
+- Contract Test Suite
+- Deployment Verification Guide
 
 ---
 
