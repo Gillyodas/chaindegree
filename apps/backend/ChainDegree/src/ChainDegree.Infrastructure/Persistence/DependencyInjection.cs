@@ -42,12 +42,14 @@ namespace ChainDegree.Core.Infrastructure.Persistence
 
             // Register configurations
             services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
-            services.Configure<BesuOptions>(configuration.GetSection(BesuOptions.SectionName));
+            services.Configure<BlockchainOptions>(configuration.GetSection(BlockchainOptions.SectionName));
+            services.AddSingleton<IBlockchainSigner, LocalEnvSigner>();
             services.Configure<BatchingWorkerOptions>(configuration.GetSection(BatchingWorkerOptions.SectionName));
 
             // Register background workers
             services.AddHostedService<OutboxProcessor>();
             services.AddHostedService<BackgroundWorkers.BatchingDegreeWorker>();
+            services.AddHostedService<BlockchainStartupValidatorService>();
 
             // Register interceptors
             services.AddScoped<AuditableEntityInterceptor>();

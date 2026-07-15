@@ -41,9 +41,6 @@ namespace ChainDegree.API
             builder.Services.Configure<JwtOptions>(
                 builder.Configuration.GetSection(JwtOptions.SectionName));
 
-            builder.Services.Configure<BesuOptions>(
-                builder.Configuration.GetSection("Blockchain:Besu"));
-
             // Register health checks (EF Core database check)
             builder.Services.AddHealthChecks()
                 .AddDbContextCheck<ChainDegreeDbContext>("Database");
