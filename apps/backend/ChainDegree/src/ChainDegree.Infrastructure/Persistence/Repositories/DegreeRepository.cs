@@ -107,6 +107,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                 }
 
                 return new VerificationSnapshot(
+                    degreeId: historicalVersion.DegreeId,
                     dataHash: historicalVersion.CurrentHash,
                     salt: historicalVersion.Salt,
                     plainDataJson: historicalVersion.PlainDataJson,
@@ -126,6 +127,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
 
             return new VerificationSnapshot(
+                degreeId: degree.Id,
                 dataHash: degree.CryptoData.DataHashLocal,
                 salt: degree.CryptoData.Salt,
                 plainDataJson: degree.CryptoData.PlainDataJson,
@@ -175,6 +177,12 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
             {
                 return null;
             }
+        }
+        public async Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, CancellationToken ct = default)
+        {
+            var record = await _context.BatchDegreeRecords
+                .FirstOrDefaultAsync(x => x.DegreeId == degreeId, ct);
+            return record?.BatchId;
         }
     }
 }

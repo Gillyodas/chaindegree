@@ -5,6 +5,7 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
 {
     public class VerificationSnapshot
     {
+        public Guid DegreeId { get; }
         public string DataHash { get; }
         public string Salt { get; }
         public string PlainDataJson { get; }
@@ -19,6 +20,7 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
         public DateTime IssuedAt { get; }
 
         public VerificationSnapshot(
+            Guid degreeId,
             string dataHash,
             string salt,
             string plainDataJson,
@@ -32,6 +34,7 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
             Guid studentId,
             DateTime issuedAt)
         {
+            DegreeId = degreeId;
             DataHash = dataHash;
             Salt = salt;
             PlainDataJson = plainDataJson;

@@ -139,14 +139,25 @@ namespace ChainDegree.Core.Application.Degrees.Queries.VerifyDegree
                 return Result<VerifyDegreeResponse>.Failure(DegreeErrors.BlockchainInvalid);
             }
 
-            // Fetch Merkle Root from contract event log / state
-            string? onChainMerkleRoot = await _blockchainService.GetAnchoredMerkleRootAsync(snapshot.TxHash, ct);
-            if (string.IsNullOrEmpty(onChainMerkleRoot))
+            // 4.1 Lookup BatchId from DB using DegreeId
+            var batchId = await _degreeRepository.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, ct);
+            if (batchId == null)
             {
-                _logger.LogWarning("On-chain Merkle Root not found for TxHash={TxHash}", snapshot.TxHash);
+                _logger.LogWarning("Batch ID not found for DegreeId={DegreeId}", snapshot.DegreeId);
                 await LogVerificationAttemptAsync(request.DegreeCode, snapshot.Version, VerificationResult.BlockchainInvalid, ct);
                 return Result<VerifyDegreeResponse>.Failure(DegreeErrors.BlockchainInvalid);
             }
+
+            // 4.2 Fetch Merkle Root from on-chain mapping (GetBatchAsync)
+            var batchResult = await _blockchainService.GetBatchAsync(batchId.Value.ToString(), ct);
+            if (batchResult.IsFailure || !batchResult.Value.Exists)
+            {
+                _logger.LogWarning("On-chain Batch not found or failed query for BatchId={BatchId}. Error={Error}", batchId, batchResult.Error.Message);
+                await LogVerificationAttemptAsync(request.DegreeCode, snapshot.Version, VerificationResult.BlockchainInvalid, ct);
+                return Result<VerifyDegreeResponse>.Failure(DegreeErrors.BlockchainInvalid);
+            }
+
+            string onChainMerkleRoot = batchResult.Value.MerkleRoot;
 
             // Verify Merkle Proof
             if (string.IsNullOrEmpty(snapshot.MerkleProofJson))
