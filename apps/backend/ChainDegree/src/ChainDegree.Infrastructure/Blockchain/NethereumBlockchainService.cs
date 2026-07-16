@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Blockchain;
+using ChainDegree.SharedKernel.Result;
+using ChainDegree.SharedKernel.DomainErrors.Blockchain;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Nethereum.Web3;
@@ -15,102 +17,164 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
     public class NethereumBlockchainService : IBlockchainService
     {
         private readonly BlockchainOptions _options;
-        private readonly IBlockchainSigner _signer;
         private readonly ILogger<NethereumBlockchainService> _logger;
-        private readonly Web3 _web3;
+        private readonly IWeb3 _web3;
 
         public NethereumBlockchainService(
             IOptions<BlockchainOptions> options,
-            IBlockchainSigner signer,
+            IWeb3 web3,
             ILogger<NethereumBlockchainService> logger)
         {
             _options = options.Value;
-            _signer = signer;
+            _web3 = web3;
             _logger = logger;
-            
-            var account = ((LocalEnvSigner)_signer).GetAccount();
-            _web3 = new Web3(account, _options.RpcUrl);
-            _web3.TransactionManager.UseLegacyAsDefault = true; // For local besu without EIP1559 if needed, but modern Besu supports it. We'll leave it default.
         }
 
-        public async Task<AnchorResult> AnchorMerkleRootAsync(
+        public async Task<Result<AnchorResult>> AnchorMerkleRootAsync(
             string batchId,
             string merkleRoot,
             string institutionId,
             string actionType,
             CancellationToken ct = default)
         {
-            byte[] batchIdBytes = EnsureBytes32(batchId);
-            byte[] merkleRootBytes = EnsureBytes32(merkleRoot);
-            byte[] instIdBytes = EnsureBytes32(institutionId);
-
-            var functionMessage = new AnchorMerkleRootFunction
+            try
             {
-                BatchId = batchIdBytes,
-                MerkleRoot = merkleRootBytes,
-                InstitutionId = instIdBytes,
-                ActionType = actionType
-            };
+                byte[] batchIdBytes = EnsureBytes32(batchId);
+                byte[] merkleRootBytes = EnsureBytes32(merkleRoot);
+                byte[] instIdBytes = EnsureBytes32(institutionId);
 
-            var handler = _web3.Eth.GetContractTransactionHandler<AnchorMerkleRootFunction>();
-            
-            _logger.LogInformation("Sending AnchorMerkleRoot transaction for BatchId {BatchId}...", batchId);
-            
-            // Note: SendRequestAsync returns TxHash immediately.
-            var txHash = await handler.SendRequestAsync(_options.ContractAddress, functionMessage);
+                var functionMessage = new AnchorMerkleRootFunction
+                {
+                    BatchId = batchIdBytes,
+                    MerkleRoot = merkleRootBytes,
+                    InstitutionId = instIdBytes,
+                    ActionType = actionType
+                };
 
-            return new AnchorResult
+                var handler = _web3.Eth.GetContractTransactionHandler<AnchorMerkleRootFunction>();
+                
+                _logger.LogInformation("Sending AnchorMerkleRoot transaction for BatchId {BatchId}...", batchId);
+                
+                var txHash = await handler.SendRequestAsync(_options.ContractAddress, functionMessage);
+
+                var anchorResult = new AnchorResult(
+                    txHash,
+                    null,
+                    DateTimeOffset.UtcNow
+                );
+
+                return Result<AnchorResult>.Success(anchorResult);
+            }
+            catch (Exception ex) when (IsBlockchainException(ex))
             {
-                TransactionHash = txHash,
-                BlockNumber = null,
-                SubmittedAt = DateTimeOffset.UtcNow
-            };
+                return Result<AnchorResult>.Failure(MapExceptionToError(ex));
+            }
         }
 
-        public async Task<bool> CheckBatchExistsAsync(string batchId, CancellationToken ct = default)
+        public async Task<Result<BatchMetadata>> GetBatchAsync(string batchId, CancellationToken ct = default)
         {
-            var handler = _web3.Eth.GetContractQueryHandler<BatchesFunction>();
-            var function = new BatchesFunction { BatchId = EnsureBytes32(batchId) };
-            
-            var result = await handler.QueryDeserializingToObjectAsync<BatchesOutputDTO>(function, _options.ContractAddress);
-            return result != null && result.Exists;
+            try
+            {
+                var handler = _web3.Eth.GetContractQueryHandler<BatchesFunction>();
+                var function = new BatchesFunction { BatchId = EnsureBytes32(batchId) };
+                
+                var result = await handler.QueryDeserializingToObjectAsync<BatchesOutputDTO>(function, _options.ContractAddress);
+                if (result == null)
+                {
+                    return Result<BatchMetadata>.Failure(BlockchainErrors.TransactionNotFound);
+                }
+
+                var metadata = new BatchMetadata(
+                    "0x" + result.MerkleRoot.ToHex(),
+                    (ulong)result.Timestamp,
+                    "0x" + result.InstitutionId.ToHex(),
+                    result.ActionType,
+                    result.Exists
+                );
+
+                return Result<BatchMetadata>.Success(metadata);
+            }
+            catch (Exception ex) when (IsBlockchainException(ex))
+            {
+                return Result<BatchMetadata>.Failure(MapExceptionToError(ex));
+            }
         }
 
-        public async Task<TransactionStatus> GetTransactionStatusAsync(string txHash, CancellationToken ct = default)
+        public async Task<Result<TransactionStatus>> GetTransactionStatusAsync(string txHash, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(txHash))
             {
-                return TransactionStatus.NotFound;
+                return Result<TransactionStatus>.Failure(BlockchainErrors.TransactionNotFound);
             }
 
-            var receipt = await _web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txHash);
-            if (receipt == null)
+            try
             {
-                return TransactionStatus.NotFound;
+                var transaction = await _web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txHash);
+                if (transaction == null)
+                {
+                    return Result<TransactionStatus>.Success(TransactionStatus.NotFound);
+                }
+
+                var receipt = await _web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txHash);
+                if (receipt == null)
+                {
+                    return Result<TransactionStatus>.Success(TransactionStatus.Pending);
+                }
+                
+                if (receipt.Status.Value == 1)
+                {
+                    return Result<TransactionStatus>.Success(TransactionStatus.Confirmed);
+                }
+                
+                return Result<TransactionStatus>.Success(TransactionStatus.Failed);
             }
-            
-            if (receipt.Status.Value == 1)
+            catch (Exception ex) when (IsBlockchainException(ex))
             {
-                return TransactionStatus.Confirmed;
+                return Result<TransactionStatus>.Failure(MapExceptionToError(ex));
             }
-            
-            return TransactionStatus.Failed;
         }
 
-        public async Task<string?> GetAnchoredMerkleRootAsync(string txHash, CancellationToken ct = default)
+        private bool IsBlockchainException(Exception ex)
         {
-            if (string.IsNullOrWhiteSpace(txHash)) return null;
+            return ex is SmartContractRevertException
+                || ex is TaskCanceledException
+                || ex is System.Net.Http.HttpRequestException
+                || ex is System.Net.Sockets.SocketException
+                || ex.GetType().FullName?.Contains("Nethereum") == true;
+        }
 
-            var receipt = await _web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txHash);
-            if (receipt == null || receipt.Status.Value != 1) return null;
+        private Error MapExceptionToError(Exception ex)
+        {
+            _logger.LogError(ex, "Blockchain interaction failed.");
 
-            var eventLogs = receipt.DecodeAllEvents<BatchAnchoredEventDTO>();
-            if (eventLogs.Count > 0)
+            var message = ex.Message.ToLowerInvariant();
+
+            if (ex is SmartContractRevertException || message.Contains("revert"))
             {
-                return "0x" + eventLogs[0].Event.MerkleRoot.ToHex();
+                return BlockchainErrors.ContractReverted;
             }
 
-            return null;
+            if (ex is TaskCanceledException || message.Contains("timeout"))
+            {
+                return BlockchainErrors.NetworkTimeout;
+            }
+
+            if (ex is System.Net.Http.HttpRequestException || message.Contains("connection") || message.Contains("refused") || message.Contains("503"))
+            {
+                return BlockchainErrors.RpcUnavailable;
+            }
+
+            if (message.Contains("unauthorized") || message.Contains("not authorized") || message.Contains("sender"))
+            {
+                return BlockchainErrors.Unauthorized;
+            }
+
+            if (ex.GetType().FullName?.Contains("Rpc") == true)
+            {
+                return BlockchainErrors.RpcUnavailable;
+            }
+
+            throw ex;
         }
 
         private byte[] EnsureBytes32(string hex)
@@ -119,7 +183,6 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
             {
                 hex = hex.Substring(2);
             }
-            // Pad to 64 hex chars (32 bytes) if needed, though mostly it should be 32 bytes from Keccak256
             if (hex.Length < 64)
             {
                 hex = hex.PadLeft(64, '0');
@@ -168,18 +231,5 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
 
         [Parameter("bool", "Exists", 5)]
         public bool Exists { get; set; }
-    }
-
-    [Event("BatchAnchored")]
-    public class BatchAnchoredEventDTO : IEventDTO
-    {
-        [Parameter("bytes32", "batchId", 1, true)]
-        public byte[] BatchId { get; set; } = null!;
-
-        [Parameter("bytes32", "merkleRoot", 2, false)]
-        public byte[] MerkleRoot { get; set; } = null!;
-
-        [Parameter("uint256", "timestamp", 3, false)]
-        public BigInteger Timestamp { get; set; }
     }
 }

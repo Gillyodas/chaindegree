@@ -16,6 +16,9 @@ using ChainDegree.Core.Infrastructure.Cryptography.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Nethereum.Web3;
+using Nethereum.Web3.Accounts;
+using Microsoft.Extensions.Options;
 
 namespace ChainDegree.Core.Infrastructure.Persistence
 {
@@ -43,6 +46,21 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             // Register configurations
             services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
             services.Configure<BlockchainOptions>(configuration.GetSection(BlockchainOptions.SectionName));
+            services.AddSingleton<IWeb3>(sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<BlockchainOptions>>().Value;
+                var pk = options.PrivateKey;
+                if (string.IsNullOrWhiteSpace(pk))
+                {
+                    throw new System.ArgumentException("Blockchain PrivateKey is not configured.");
+                }
+                if (pk.StartsWith("0x", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    pk = pk.Substring(2);
+                }
+                var account = new Account(pk);
+                return new Web3(account, options.RpcUrl);
+            });
             services.AddSingleton<IBlockchainSigner, LocalEnvSigner>();
             services.Configure<BatchingWorkerOptions>(configuration.GetSection(BatchingWorkerOptions.SectionName));
 

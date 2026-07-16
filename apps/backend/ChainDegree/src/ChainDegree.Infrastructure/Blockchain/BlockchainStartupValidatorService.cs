@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Blockchain;
@@ -8,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nethereum.Web3;
 using Nethereum.Contracts;
-using Nethereum.Hex.HexTypes;
+using Nethereum.ABI.FunctionEncoding.Attributes;
 
 namespace ChainDegree.Core.Infrastructure.Blockchain
 {
@@ -16,15 +15,18 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
     {
         private readonly ILogger<BlockchainStartupValidatorService> _logger;
         private readonly BlockchainOptions _options;
+        private readonly IWeb3 _web3;
         private readonly IBlockchainSigner _signer;
 
         public BlockchainStartupValidatorService(
             ILogger<BlockchainStartupValidatorService> logger,
             IOptions<BlockchainOptions> options,
+            IWeb3 web3,
             IBlockchainSigner signer)
         {
             _logger = logger;
             _options = options.Value;
+            _web3 = web3;
             _signer = signer;
         }
 
@@ -37,11 +39,9 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
                 throw new InvalidOperationException("Blockchain: RpcUrl is missing in configuration.");
             }
 
-            var web3 = new Web3(_options.RpcUrl);
-
             // 1. Check ChainId
             _logger.LogInformation("Checking ChainId...");
-            var chainId = await web3.Eth.ChainId.SendRequestAsync();
+            var chainId = await _web3.Eth.ChainId.SendRequestAsync();
             if (chainId.Value != _options.ChainId)
             {
                 throw new InvalidOperationException($"Blockchain: ChainId mismatch! Expected {_options.ChainId}, but network returned {chainId.Value}.");
@@ -49,28 +49,24 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
 
             // 2. Check Contract Code
             _logger.LogInformation("Checking Contract Code at {Address}...", _options.ContractAddress);
-            var code = await web3.Eth.GetCode.SendRequestAsync(_options.ContractAddress);
+            var code = await _web3.Eth.GetCode.SendRequestAsync(_options.ContractAddress);
             if (code == "0x")
             {
                 throw new InvalidOperationException($"Blockchain: No contract found at address {_options.ContractAddress}. Did you forget to deploy?");
             }
 
-            // 3. Check Signer Rights
-            // We use the generalized approach: call authorizedAnchors(address) mapping.
-            // Function ABI for `authorizedAnchors(address)` mapping is `mapping(address => bool)`.
-            // Nethereum allows calling mapping using FunctionMessage or raw call.
-            _logger.LogInformation("Checking Signer Authorization for address {Address}...", _signer.GetAddress());
+            // 3. Check Signer Rights using strongly-typed query
+            var signerAddress = _signer.GetAddress();
+            _logger.LogInformation("Checking Signer Authorization for address {Address}...", signerAddress);
             
-            var contract = web3.Eth.GetContract(
-                "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"authorizedAnchors\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-                _options.ContractAddress);
-                
-            var authorizedAnchorsFunction = contract.GetFunction("authorizedAnchors");
-            var isAuthorized = await authorizedAnchorsFunction.CallAsync<bool>(_signer.GetAddress());
+            var handler = _web3.Eth.GetContractQueryHandler<AuthorizedAnchorsFunction>();
+            var function = new AuthorizedAnchorsFunction { SignerAddress = signerAddress };
+            
+            var isAuthorized = await handler.QueryAsync<bool>(_options.ContractAddress, function);
 
             if (!isAuthorized)
             {
-                throw new InvalidOperationException($"Blockchain: Signer {_signer.GetAddress()} is NOT authorized to anchor on contract {_options.ContractAddress}. Fail Fast.");
+                throw new InvalidOperationException($"Blockchain: Signer {signerAddress} is NOT authorized to anchor on contract {_options.ContractAddress}. Fail Fast.");
             }
 
             _logger.LogInformation("Blockchain Configuration Validation PASSED.");
@@ -80,5 +76,12 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
         {
             return Task.CompletedTask;
         }
+    }
+
+    [Function("authorizedAnchors", "bool")]
+    public class AuthorizedAnchorsFunction : FunctionMessage
+    {
+        [Parameter("address", "", 1)]
+        public string SignerAddress { get; set; } = null!;
     }
 }
