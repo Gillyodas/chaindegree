@@ -1,27 +1,24 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using ChainDegree.SharedKernel.Result;
 
 namespace ChainDegree.Core.Application.Abstractions.Blockchain
 {
     public interface IBlockchainService
     {
-        Task<AnchorResult> AnchorMerkleRootAsync(
+        Task<Result<AnchorResult>> AnchorMerkleRootAsync(
             string batchId,
             string merkleRoot,
             string institutionId,
             string actionType,
             CancellationToken ct = default);
 
-        Task<TransactionStatus> GetTransactionStatusAsync(
+        Task<Result<TransactionStatus>> GetTransactionStatusAsync(
             string txHash,
             CancellationToken ct = default);
 
-        Task<string?> GetAnchoredMerkleRootAsync(
-            string txHash,
-            CancellationToken ct = default);
-
-        Task<bool> CheckBatchExistsAsync(
+        Task<Result<BatchMetadata>> GetBatchAsync(
             string batchId,
             CancellationToken ct = default);
     }
@@ -34,10 +31,17 @@ namespace ChainDegree.Core.Application.Abstractions.Blockchain
         NotFound
     }
 
-    public sealed record AnchorResult
-    {
-        public string TransactionHash { get; init; } = null!;
-        public ulong? BlockNumber { get; init; }
-        public DateTimeOffset SubmittedAt { get; init; }
-    }
+    public sealed record AnchorResult(
+        string TransactionHash,
+        ulong? BlockNumber,
+        DateTimeOffset SubmittedAt
+    );
+
+    public sealed record BatchMetadata(
+        string MerkleRoot,
+        ulong Timestamp,
+        string InstitutionId,
+        string ActionType,
+        bool Exists
+    );
 }
