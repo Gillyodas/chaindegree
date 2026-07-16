@@ -13,12 +13,13 @@ using ChainDegree.Core.Infrastructure.Configurations;
 using ChainDegree.Core.Infrastructure.Persistence;
 using ChainDegree.Core.Infrastructure.Persistence.Entities;
 using ChainDegree.SharedKernel.Common.Log;
+using ChainDegree.SharedKernel.Result;
+using ChainDegree.SharedKernel.DomainErrors.Blockchain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 
 namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 {
@@ -77,50 +78,73 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 
                     if (!string.IsNullOrEmpty(batch.TxHash))
                     {
-                        // Have TxHash: Check Receipt
-                        var status = await blockchainService.GetTransactionStatusAsync(batch.TxHash, ct);
+                        var statusResult = await blockchainService.GetTransactionStatusAsync(batch.TxHash, ct);
                         
-                        if (status == TransactionStatus.Confirmed)
+                        if (statusResult.IsFailure)
                         {
-                            isConfirmed = true;
-                        }
-                        else if (status == TransactionStatus.Failed)
-                        {
-                            failedReason = "Transaction reverted on-chain.";
-                        }
-                        else 
-                        {
-                            // Pending or NotFound
-                            var waitTime = DateTime.UtcNow - batch.CreatedAt;
-                            if (waitTime.TotalMinutes > 30)
+                            _logger.LogError("Failed to get transaction status for batch {BatchId}: {Error}", batch.Id, statusResult.Error.Message);
+                            
+                            if (IsTransientError(statusResult.Error))
                             {
-                                failedReason = $"Transaction {status} timeout after 30 minutes.";
+                                continue; // Wait and try again next poll
                             }
-                            else
+                            
+                            failedReason = $"Transaction lookup failed permanently: {statusResult.Error.Message}";
+                        }
+                        else
+                        {
+                            var status = statusResult.Value;
+                            if (status == TransactionStatus.Confirmed)
                             {
-                                // Still wait
-                                continue;
+                                isConfirmed = true;
+                            }
+                            else if (status == TransactionStatus.Failed)
+                            {
+                                failedReason = "Transaction reverted on-chain.";
+                            }
+                            else 
+                            {
+                                // Pending or NotFound
+                                var waitTime = DateTime.UtcNow - batch.CreatedAt;
+                                if (waitTime.TotalMinutes > 30)
+                                {
+                                    failedReason = $"Transaction {status} timeout after 30 minutes.";
+                                }
+                                else
+                                {
+                                    continue; // Keep waiting
+                                }
                             }
                         }
                     }
                     else
                     {
-                        // TxHash is null (Unknown Outcome due to timeout during send)
                         _logger.LogWarning("Batch {BatchId} has null TxHash. Checking on-chain state...", batch.Id);
                         
-                        var exists = await blockchainService.CheckBatchExistsAsync(batch.Id.ToString(), ct);
+                        var batchResult = await blockchainService.GetBatchAsync(batch.Id.ToString(), ct);
                         
-                        if (exists)
+                        if (batchResult.IsSuccess)
                         {
-                            isConfirmed = true;
-                            // We don't have the TxHash, but it is confirmed.
-                            batch.TxHash = "UNKNOWN_RECOVERED_ONCHAIN";
+                            if (batchResult.Value.Exists)
+                            {
+                                isConfirmed = true;
+                                batch.TxHash = "UNKNOWN_RECOVERED_ONCHAIN";
+                            }
+                            else
+                            {
+                                failedReason = "Unknown outcome resolved: Batch not found on-chain. Will retry.";
+                            }
                         }
                         else
                         {
-                            // Not exists, and we had a timeout earlier.
-                            // We can mark it as failed so the retry logic will pick up the degrees again.
-                            failedReason = "Unknown outcome resolved: Batch not found on-chain. Will retry.";
+                            _logger.LogError("Failed to query batch metadata for batch {BatchId}: {Error}", batch.Id, batchResult.Error.Message);
+                            
+                            if (IsTransientError(batchResult.Error))
+                            {
+                                continue; // Wait and retry next poll
+                            }
+                            
+                            failedReason = $"Batch metadata lookup failed permanently: {batchResult.Error.Message}";
                         }
                     }
 
@@ -151,13 +175,8 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 
             await using var claimTransaction = await dbContext.Database.BeginTransactionAsync(ct);
 
-            // Fetch degrees that are available for batching
-            // Wait, we need to ensure they are not part of an ongoing batch.
-            // We can check if they don't have a Processing record, or if their Processing record is Failed/Queued and NextRetryAt <= Now
-            
             var now = DateTime.UtcNow;
             
-            // This query replaces the simple GetPendingConfirmationAsync to account for retries
             var availableDegreeIds = await dbContext.Degrees
                 .Where(d => d.Status == StatusEnum.Pending_Confirmation || d.Status == StatusEnum.Pending_Update || d.Status == StatusEnum.Pending_Revocation)
                 .GroupJoin(dbContext.DegreeProcessingRecords, d => d.Id, pr => pr.DegreeId, (d, prs) => new { d, prs })
@@ -175,7 +194,6 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 return;
             }
 
-            // We only process if we hit max batch size or time threshold
             var degreesToProcess = await dbContext.Degrees.Where(d => availableDegreeIds.Contains(d.Id)).ToListAsync(ct);
             var oldestDegree = degreesToProcess.Min(d => d.CreatedAt);
             var waitTimeSeconds = (now - oldestDegree).TotalSeconds;
@@ -216,7 +234,6 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
             await dbContext.SaveChangesAsync(ct);
             await claimTransaction.CommitAsync(ct);
 
-            // Phase 2: Create batches per institution
             var claimedDegrees = await dbContext.Degrees
                 .Include(d => d.CryptoData)
                 .Join(dbContext.DegreeProcessingRecords, d => d.Id, pr => pr.DegreeId, (d, pr) => new { Degree = d, Record = pr })
@@ -239,7 +256,6 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 var shortGuid = Guid.NewGuid().ToString("N").Substring(0, 8);
                 var batchName = $"BATCH_{instCode.ToUpperInvariant()}_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{shortGuid}";
 
-                // Build leaf hashes
                 var leafHashes = new List<string>();
                 foreach (var item in institutionItems)
                 {
@@ -271,78 +287,66 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 dbContext.BatchRecords.Add(batchRecord);
                 await dbContext.SaveChangesAsync(ct);
 
-                // Send Tx with Polly Retry for transient errors
-                AnchorResult? anchorResult = null;
+                Result<AnchorResult>? anchorResult = null;
                 string? txError = null;
 
-                try
+                int maxRetries = 3;
+                for (int retry = 0; retry < maxRetries; retry++)
                 {
-                    // Polly Retry (Simulated manually for simplicity and no external dependencies, exponential backoff)
-                    int maxRetries = 3;
-                    for (int retry = 0; retry < maxRetries; retry++)
+                    var actionType = institutionItems.First().Record.ActionType;
+                    var result = await blockchainService.AnchorMerkleRootAsync(
+                        batchId.ToString(), 
+                        treeResult.MerkleRoot, 
+                        institutionId.ToString(), 
+                        actionType, 
+                        ct);
+                    
+                    if (result.IsSuccess)
                     {
-                        try
-                        {
-                            var actionType = institutionItems.First().Record.ActionType;
-                            anchorResult = await blockchainService.AnchorMerkleRootAsync(batchId.ToString(), treeResult.MerkleRoot, institutionId.ToString(), actionType, ct);
-                            break; // Success
-                        }
-                        catch (Exception txEx)
-                        {
-                            bool isTransient = IsTransientError(txEx);
-                            if (isTransient && retry < maxRetries - 1)
-                            {
-                                await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retry)), ct); // Exponential backoff: 1s, 2s...
-                                continue;
-                            }
-                            
-                            // Permanent error or max retries reached
-                            txError = txEx.Message;
-                            break;
-                        }
+                        anchorResult = result;
+                        break;
                     }
-                }
-                catch (Exception ex)
-                {
-                    txError = ex.Message;
+                    
+                    txError = result.Error.Message;
+                    
+                    if (IsTransientError(result.Error) && retry < maxRetries - 1)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retry)), ct);
+                        continue;
+                    }
+                    
+                    // Permanent error or max retries reached
+                    break;
                 }
 
-                if (anchorResult != null)
+                if (anchorResult != null && anchorResult.IsSuccess)
                 {
-                    batchRecord.TxHash = anchorResult.TransactionHash;
+                    batchRecord.TxHash = anchorResult.Value.TransactionHash;
                     await dbContext.SaveChangesAsync(ct);
                 }
                 else
                 {
-                    // Unknown Outcome or Permanent Error!
-                    // TxHash is left null.
-                    _logger.LogWarning("Unknown Outcome or Permanent Error for batch {BatchId}: {Error}", batchId, txError);
-                    // The RecoverPendingBatchesAsync will handle it on next cycle!
+                    if (anchorResult != null && !IsTransientError(anchorResult.Error))
+                    {
+                        _logger.LogError("Permanent failure executing AnchorMerkleRoot for batch {BatchId}: {Error}", batchId, txError);
+                        await FinalizeBatchFailedAsync(dbContext, batchRecord, anchorResult.Error.Message, ct);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Unknown Outcome (Transient Timeout) for batch {BatchId}: {Error}", batchId, txError);
+                    }
                 }
             }
         }
 
-        private bool IsTransientError(Exception ex)
+        private bool IsTransientError(Error error)
         {
-            var msg = ex.Message.ToLowerInvariant();
-            if (msg.Contains("timeout") || msg.Contains("503") || msg.Contains("network error") || msg.Contains("connection"))
-            {
-                return true;
-            }
-            return false;
+            return error == BlockchainErrors.NetworkTimeout 
+                || error == BlockchainErrors.RpcUnavailable;
         }
 
         private async Task FinalizeBatchSuccessAsync(ChainDegreeDbContext dbContext, BatchRecord batchRecord, CancellationToken ct)
         {
-            // Find all degrees associated with this batch through the Processing records?
-            // Wait, we didn't link BatchRecord to DegreeProcessingRecord.
-            // But we know which degrees they are because we can query them via worker logic, or we can just find them by institution ID and status.
-            // Actually, in ProcessNewBatchesAsync we did not link DegreeProcessingRecord to BatchId!
-            // Let's add BatchId to DegreeProcessingRecord! Wait, `DegreeProcessingRecord` does not have `BatchId`. 
-            // It has `WorkerId`. But WorkerId groups multiple batches.
-            // We should link DegreeProcessingRecord to BatchRecord. But we can't change the entity schema right now without migrations.
-            // What we can do: the degrees that are in `Processing` state for this `InstitutionId`.
-            
             var records = await dbContext.DegreeProcessingRecords
                 .Where(pr => pr.State == "Processing")
                 .Join(dbContext.Degrees, pr => pr.DegreeId, d => d.Id, (pr, d) => new { pr, d })
@@ -430,7 +434,7 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                     }
                     else
                     {
-                        record.State = "Failed"; // Mark failed so it gets picked up again
+                        record.State = "Failed";
                         record.NextRetryAt = DateTime.UtcNow.AddMinutes(Math.Pow(2, record.RetryCount));
                     }
                 }
