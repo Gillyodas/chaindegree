@@ -15,6 +15,7 @@ using ChainDegree.Core.Infrastructure.Persistence.Entities;
 using ChainDegree.SharedKernel.Common.Log;
 using ChainDegree.SharedKernel.Result;
 using ChainDegree.SharedKernel.DomainErrors.Blockchain;
+using ChainDegree.SharedKernel.Common.Error;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

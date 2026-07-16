@@ -1,4 +1,4 @@
-using ChainDegree.SharedKernel.Result;
+using ChainDegree.SharedKernel.Common.Error;
 
 namespace ChainDegree.SharedKernel.DomainErrors.Blockchain
 {

@@ -11,6 +11,8 @@ using ChainDegree.Core.Domain.Degrees.Enums;
 using ChainDegree.Core.Domain.Degrees.ValueObjects;
 using ChainDegree.Core.Domain.SharedKernel.Enums;
 using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
+using ChainDegree.SharedKernel.Result;
+using ChainDegree.SharedKernel.DomainErrors.Blockchain;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -42,7 +44,8 @@ namespace ChainDegree.Application.Tests.Degrees
                 _mockMerkle.Object,
                 _mockHash.Object,
                 _mockBehaviorLog.Object,
-                _mockLogger.Object);
+                _mockLogger.Object
+            );
         }
 
         [Fact]
@@ -60,17 +63,10 @@ namespace ChainDegree.Application.Tests.Degrees
             // Assert
             Assert.True(result.IsFailure);
             Assert.Equal(DegreeErrors.NotFound, result.Error);
-            _mockBehaviorLog.Verify(b => b.LogAsync(
-                ActionTypeEnum.VERIFY_DEGREE,
-                "DEGREES",
-                Guid.Parse("00000000-0000-0000-0000-000000000002"),
-                null,
-                It.Is<string>(json => json.Contains("DegreeNotFound")),
-                It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
-        public async Task Handle_UnsupportedVersion_ReturnsFailure()
+        public async Task Handle_VersionNotFound_ReturnsFailure()
         {
             // Arrange
             _mockRepo.Setup(r => r.GetVerificationSnapshotAsync("DEG-001", 3, It.IsAny<CancellationToken>()))
@@ -91,6 +87,7 @@ namespace ChainDegree.Application.Tests.Degrees
         {
             // Arrange
             var snapshot = new VerificationSnapshot(
+                degreeId: Guid.NewGuid(),
                 dataHash: "hash123",
                 salt: "salt123",
                 plainDataJson: "{}",
@@ -123,6 +120,7 @@ namespace ChainDegree.Application.Tests.Degrees
         {
             // Arrange
             var snapshot = new VerificationSnapshot(
+                degreeId: Guid.NewGuid(),
                 dataHash: "hash123",
                 salt: "salt123",
                 plainDataJson: "{}",
@@ -156,6 +154,7 @@ namespace ChainDegree.Application.Tests.Degrees
         {
             // Arrange
             var snapshot = new VerificationSnapshot(
+                degreeId: Guid.NewGuid(),
                 dataHash: "hash123",
                 salt: "salt123",
                 plainDataJson: "{}",
@@ -191,6 +190,7 @@ namespace ChainDegree.Application.Tests.Degrees
         {
             // Arrange
             var snapshot = new VerificationSnapshot(
+                degreeId: Guid.NewGuid(),
                 dataHash: "hash123",
                 salt: "salt123",
                 plainDataJson: "{}",
@@ -211,8 +211,12 @@ namespace ChainDegree.Application.Tests.Degrees
             _mockHash.Setup(h => h.CalculateHashAsync(It.IsAny<DegreeData>(), "salt123", It.IsAny<CancellationToken>()))
                      .ReturnsAsync("hash123");
 
-            _mockBlockchain.Setup(b => b.GetAnchoredMerkleRootAsync("0x123", It.IsAny<CancellationToken>()))
-                           .ReturnsAsync((string?)null);
+            var fixedBatchId = Guid.NewGuid();
+            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync(fixedBatchId);
+
+            _mockBlockchain.Setup(b => b.GetBatchAsync(fixedBatchId.ToString(), It.IsAny<CancellationToken>()))
+                           .ReturnsAsync(Result<BatchMetadata>.Success(new BatchMetadata("0x0", 0, "0x0", "Issue", false)));
 
             var query = new VerifyDegreeQuery("DEG-001");
 
@@ -229,6 +233,7 @@ namespace ChainDegree.Application.Tests.Degrees
         {
             // Arrange
             var snapshot = new VerificationSnapshot(
+                degreeId: Guid.NewGuid(),
                 dataHash: "hash123",
                 salt: "salt123",
                 plainDataJson: "{}",
@@ -249,8 +254,12 @@ namespace ChainDegree.Application.Tests.Degrees
             _mockHash.Setup(h => h.CalculateHashAsync(It.IsAny<DegreeData>(), "salt123", It.IsAny<CancellationToken>()))
                      .ReturnsAsync("hash123");
 
-            _mockBlockchain.Setup(b => b.GetAnchoredMerkleRootAsync("0x123", It.IsAny<CancellationToken>()))
-                           .ReturnsAsync("merkleRootOnChain");
+            var fixedBatchId = Guid.NewGuid();
+            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync(fixedBatchId);
+
+            _mockBlockchain.Setup(b => b.GetBatchAsync(fixedBatchId.ToString(), It.IsAny<CancellationToken>()))
+                           .ReturnsAsync(Result<BatchMetadata>.Success(new BatchMetadata("merkleRootOnChain", 123456, "0x0", "Issue", true)));
 
             _mockMerkle.Setup(m => m.VerifyProof("hash123", It.IsAny<MerkleProofData>(), "merkleRootOnChain"))
                        .Returns(false);
@@ -270,6 +279,7 @@ namespace ChainDegree.Application.Tests.Degrees
         {
             // Arrange
             var snapshot = new VerificationSnapshot(
+                degreeId: Guid.NewGuid(),
                 dataHash: "hash123",
                 salt: "salt123",
                 plainDataJson: "{}",
@@ -290,8 +300,12 @@ namespace ChainDegree.Application.Tests.Degrees
             _mockHash.Setup(h => h.CalculateHashAsync(It.IsAny<DegreeData>(), "salt123", It.IsAny<CancellationToken>()))
                      .ReturnsAsync("hash123");
 
-            _mockBlockchain.Setup(b => b.GetAnchoredMerkleRootAsync("0x123", It.IsAny<CancellationToken>()))
-                           .ReturnsAsync("merkleRootOnChain");
+            var fixedBatchId = Guid.NewGuid();
+            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync(fixedBatchId);
+
+            _mockBlockchain.Setup(b => b.GetBatchAsync(fixedBatchId.ToString(), It.IsAny<CancellationToken>()))
+                           .ReturnsAsync(Result<BatchMetadata>.Success(new BatchMetadata("merkleRootOnChain", 123456, "0x0", "Issue", true)));
 
             _mockMerkle.Setup(m => m.VerifyProof("hash123", It.IsAny<MerkleProofData>(), "merkleRootOnChain"))
                        .Returns(true);

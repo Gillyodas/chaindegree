@@ -4,11 +4,13 @@ using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Blockchain;
 using ChainDegree.SharedKernel.Result;
 using ChainDegree.SharedKernel.DomainErrors.Blockchain;
+using DomainError = ChainDegree.SharedKernel.Common.Error.Error;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Nethereum.Web3;
 using Nethereum.Contracts;
 using Nethereum.ABI.FunctionEncoding.Attributes;
+using Nethereum.ABI.FunctionEncoding;
 using Nethereum.Hex.HexConvertors.Extensions;
 using System.Numerics;
 
@@ -143,7 +145,7 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
                 || ex.GetType().FullName?.Contains("Nethereum") == true;
         }
 
-        private Error MapExceptionToError(Exception ex)
+        private DomainError MapExceptionToError(Exception ex)
         {
             _logger.LogError(ex, "Blockchain interaction failed.");
 
