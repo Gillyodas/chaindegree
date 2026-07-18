@@ -24,6 +24,12 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY || DEV_PRIVATE_KEY],
       gasPrice: 2000000000,
     },
+    besuConsortium: {
+      url: process.env.RPC_URL || "http://127.0.0.1:8545",
+      chainId: 2026,
+      accounts: [process.env.PRIVATE_KEY || DEV_PRIVATE_KEY],
+      gasPrice: 0,
+    },
   },
 };
 
