@@ -46,10 +46,18 @@ Mạng lưới sẽ chạy dưới nền với 5 containers:
 Gọi JSON-RPC đến node RPC để kiểm tra Chain ID và Block Number:
 ```bash
 # Kiểm tra Chain ID (Kỳ vọng trả về 0x7ea = 2026 thập phân)
+# Dành cho Linux / Git Bash / macOS:
 curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' http://localhost:8545
 
+# Dành cho Windows Command Prompt (CMD):
+curl -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\",\"params\":[],\"id\":1}" http://localhost:8545
+
+# Dành cho Windows PowerShell:
+Invoke-RestMethod -Uri http://localhost:8545 -Method Post -ContentType "application/json" -Body '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
+
 # Kiểm tra Block Number hiện tại (Phải tăng dần nếu có block mới đóng)
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' http://localhost:8545
+# Dành cho Windows PowerShell:
+Invoke-RestMethod -Uri http://localhost:8545 -Method Post -ContentType "application/json" -Body '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 ```
 
 ### Bước 4: Deploy Smart Contract lên mạng Consortium
