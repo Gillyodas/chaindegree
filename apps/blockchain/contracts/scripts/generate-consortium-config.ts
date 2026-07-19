@@ -48,13 +48,13 @@ async function main() {
   }
 
   // Create static-nodes.json
-  // We use the docker service names as hostnames in the docker compose network
+  // We use numeric static IP addresses for the containers, which Besu requires
   const staticNodes = [
-    `enode://${nodeKeys["validator1"].enodePubKey}@besu-validator1:30303`,
-    `enode://${nodeKeys["validator2"].enodePubKey}@besu-validator2:30303`,
-    `enode://${nodeKeys["validator3"].enodePubKey}@besu-validator3:30303`,
-    `enode://${nodeKeys["validator4"].enodePubKey}@besu-validator4:30303`,
-    `enode://${nodeKeys["rpc"].enodePubKey}@besu-rpc:30303`,
+    `enode://${nodeKeys["validator1"].enodePubKey}@172.28.0.11:30303`,
+    `enode://${nodeKeys["validator2"].enodePubKey}@172.28.0.12:30303`,
+    `enode://${nodeKeys["validator3"].enodePubKey}@172.28.0.13:30303`,
+    `enode://${nodeKeys["validator4"].enodePubKey}@172.28.0.14:30303`,
+    `enode://${nodeKeys["rpc"].enodePubKey}@172.28.0.15:30303`,
   ];
 
   fs.writeFileSync(
@@ -82,7 +82,7 @@ async function main() {
   const extraDataRlp = ethers.encodeRlp([
     vanity,
     validatorsList,
-    "0x",
+    [],
     "0x",
     []
   ]);
