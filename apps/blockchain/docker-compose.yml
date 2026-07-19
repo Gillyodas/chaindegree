@@ -5,124 +5,142 @@ networks:
     driver: bridge
   blockchain_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
 
 services:
   besu-validator1:
     image: hyperledger/besu:23.10.2
     container_name: besu-validator1
+    user: "0"
     command:
       - --genesis-file=/opt/besu/genesis.json
       - --node-private-key-file=/opt/besu/key
-      - --data-path=/opt/besu/data
+      - --data-path=/var/lib/besu
+      - --static-nodes-file=/opt/besu/static-nodes.json
       - --discovery-enabled=false
       - --p2p-enabled=true
-      - --p2p-host=besu-validator1
+      - --p2p-host=172.28.0.11
       - --p2p-port=30303
     ports:
       - "30303:30303"
     volumes:
-      - besu-data-validator1:/opt/besu/data
+      - besu-data-validator1:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
       - ./configs/validator1/key:/opt/besu/key
-      - ./configs/static-nodes.json:/opt/besu/data/static-nodes.json
+      - ./configs/static-nodes.json:/opt/besu/static-nodes.json
     networks:
-      - blockchain_network
+      blockchain_network:
+        ipv4_address: 172.28.0.11
     restart: unless-stopped
 
   besu-validator2:
     image: hyperledger/besu:23.10.2
     container_name: besu-validator2
+    user: "0"
     command:
       - --genesis-file=/opt/besu/genesis.json
       - --node-private-key-file=/opt/besu/key
-      - --data-path=/opt/besu/data
+      - --data-path=/var/lib/besu
+      - --static-nodes-file=/opt/besu/static-nodes.json
       - --discovery-enabled=false
       - --p2p-enabled=true
-      - --p2p-host=besu-validator2
+      - --p2p-host=172.28.0.12
       - --p2p-port=30303
     ports:
       - "30304:30303"
     volumes:
-      - besu-data-validator2:/opt/besu/data
+      - besu-data-validator2:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
       - ./configs/validator2/key:/opt/besu/key
-      - ./configs/static-nodes.json:/opt/besu/data/static-nodes.json
+      - ./configs/static-nodes.json:/opt/besu/static-nodes.json
     networks:
-      - blockchain_network
+      blockchain_network:
+        ipv4_address: 172.28.0.12
     restart: unless-stopped
 
   besu-validator3:
     image: hyperledger/besu:23.10.2
     container_name: besu-validator3
+    user: "0"
     command:
       - --genesis-file=/opt/besu/genesis.json
       - --node-private-key-file=/opt/besu/key
-      - --data-path=/opt/besu/data
+      - --data-path=/var/lib/besu
+      - --static-nodes-file=/opt/besu/static-nodes.json
       - --discovery-enabled=false
       - --p2p-enabled=true
-      - --p2p-host=besu-validator3
+      - --p2p-host=172.28.0.13
       - --p2p-port=30303
     ports:
       - "30305:30303"
     volumes:
-      - besu-data-validator3:/opt/besu/data
+      - besu-data-validator3:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
       - ./configs/validator3/key:/opt/besu/key
-      - ./configs/static-nodes.json:/opt/besu/data/static-nodes.json
+      - ./configs/static-nodes.json:/opt/besu/static-nodes.json
     networks:
-      - blockchain_network
+      blockchain_network:
+        ipv4_address: 172.28.0.13
     restart: unless-stopped
 
   besu-validator4:
     image: hyperledger/besu:23.10.2
     container_name: besu-validator4
+    user: "0"
     command:
       - --genesis-file=/opt/besu/genesis.json
       - --node-private-key-file=/opt/besu/key
-      - --data-path=/opt/besu/data
+      - --data-path=/var/lib/besu
+      - --static-nodes-file=/opt/besu/static-nodes.json
       - --discovery-enabled=false
       - --p2p-enabled=true
-      - --p2p-host=besu-validator4
+      - --p2p-host=172.28.0.14
       - --p2p-port=30303
     ports:
       - "30306:30303"
     volumes:
-      - besu-data-validator4:/opt/besu/data
+      - besu-data-validator4:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
       - ./configs/validator4/key:/opt/besu/key
-      - ./configs/static-nodes.json:/opt/besu/data/static-nodes.json
+      - ./configs/static-nodes.json:/opt/besu/static-nodes.json
     networks:
-      - blockchain_network
+      blockchain_network:
+        ipv4_address: 172.28.0.14
     restart: unless-stopped
 
   besu-rpc:
     image: hyperledger/besu:23.10.2
     container_name: besu-rpc
+    user: "0"
     command:
       - --genesis-file=/opt/besu/genesis.json
       - --node-private-key-file=/opt/besu/key
-      - --data-path=/opt/besu/data
+      - --data-path=/var/lib/besu
+      - --static-nodes-file=/opt/besu/static-nodes.json
       - --discovery-enabled=false
       - --p2p-enabled=true
-      - --p2p-host=besu-rpc
+      - --p2p-host=172.28.0.15
       - --p2p-port=30303
       - --rpc-http-enabled=true
       - --rpc-http-host=0.0.0.0
       - --rpc-http-port=8545
       - --rpc-http-api=ETH,NET,WEB3
       - --rpc-http-cors-origins=*
-      - --host-allowlist=localhost,besu-rpc,backend,127.0.0.1
+      - --host-allowlist=localhost,besu-rpc,backend,127.0.0.1,172.28.0.15
     ports:
       - "8545:8545"
       - "30307:30303"
     volumes:
-      - besu-data-rpc:/opt/besu/data
+      - besu-data-rpc:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
       - ./configs/rpc/key:/opt/besu/key
-      - ./configs/static-nodes.json:/opt/besu/data/static-nodes.json
+      - ./configs/static-nodes.json:/opt/besu/static-nodes.json
     networks:
-      - blockchain_network
-      - backend_network
+      blockchain_network:
+        ipv4_address: 172.28.0.15
+      backend_network:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "nc -z localhost 8545 || curl -f http://localhost:8545 || exit 1"]
