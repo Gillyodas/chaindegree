@@ -23,6 +23,9 @@ services:
       - --p2p-enabled=true
       - --p2p-host=172.28.0.11
       - --p2p-port=30303
+      - --metrics-enabled=true
+      - --metrics-host=0.0.0.0
+      - --metrics-port=9545
     ports:
       - "30303:30303"
     volumes:
@@ -48,6 +51,9 @@ services:
       - --p2p-enabled=true
       - --p2p-host=172.28.0.12
       - --p2p-port=30303
+      - --metrics-enabled=true
+      - --metrics-host=0.0.0.0
+      - --metrics-port=9545
     ports:
       - "30304:30303"
     volumes:
@@ -73,6 +79,9 @@ services:
       - --p2p-enabled=true
       - --p2p-host=172.28.0.13
       - --p2p-port=30303
+      - --metrics-enabled=true
+      - --metrics-host=0.0.0.0
+      - --metrics-port=9545
     ports:
       - "30305:30303"
     volumes:
@@ -98,6 +107,9 @@ services:
       - --p2p-enabled=true
       - --p2p-host=172.28.0.14
       - --p2p-port=30303
+      - --metrics-enabled=true
+      - --metrics-host=0.0.0.0
+      - --metrics-port=9545
     ports:
       - "30306:30303"
     volumes:
@@ -129,6 +141,9 @@ services:
       - --rpc-http-api=ETH,NET,WEB3
       - --rpc-http-cors-origins=*
       - --host-allowlist=localhost,besu-rpc,backend,127.0.0.1,172.28.0.15
+      - --metrics-enabled=true
+      - --metrics-host=0.0.0.0
+      - --metrics-port=9545
     ports:
       - "8545:8545"
       - "30307:30303"
