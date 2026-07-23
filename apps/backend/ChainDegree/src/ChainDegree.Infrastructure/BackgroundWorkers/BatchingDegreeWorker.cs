@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,12 +11,12 @@ using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Degrees.Entities;
 using ChainDegree.Core.Domain.Degrees.Enums;
 using ChainDegree.Core.Infrastructure.Configurations;
+using ChainDegree.Core.Infrastructure.Monitoring;
 using ChainDegree.Core.Infrastructure.Persistence;
 using ChainDegree.Core.Infrastructure.Persistence.Entities;
-using ChainDegree.SharedKernel.Common.Log;
-using ChainDegree.SharedKernel.Result;
-using ChainDegree.SharedKernel.DomainErrors.Blockchain;
 using ChainDegree.SharedKernel.Common.Error;
+using ChainDegree.SharedKernel.DomainErrors.Blockchain;
+using ChainDegree.SharedKernel.Result;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,15 +30,18 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
         private readonly IServiceProvider _serviceProvider;
         private readonly BatchingWorkerOptions _options;
         private readonly ILogger<BatchingDegreeWorker> _logger;
+        private readonly WorkerMetrics? _metrics;
 
         public BatchingDegreeWorker(
             IServiceProvider serviceProvider,
             IOptions<BatchingWorkerOptions> options,
-            ILogger<BatchingDegreeWorker> logger)
+            ILogger<BatchingDegreeWorker> logger,
+            WorkerMetrics? metrics = null)
         {
             _serviceProvider = serviceProvider;
             _options = options.Value;
             _logger = logger;
+            _metrics = metrics;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -72,6 +76,16 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 
             foreach (var batch in pendingBatches)
             {
+                var batchCorrelationId = Guid.NewGuid().ToString();
+                using var batchScope = _logger.BeginScope(new Dictionary<string, object>
+                {
+                    ["BatchCorrelationId"] = batchCorrelationId,
+                    ["BatchId"] = batch.Id,
+                    ["BlockchainTxHash"] = batch.TxHash ?? string.Empty
+                });
+
+                var recoverySw = Stopwatch.StartNew();
+
                 try
                 {
                     bool isConfirmed = false;
@@ -83,11 +97,13 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                         
                         if (statusResult.IsFailure)
                         {
-                            _logger.LogError("Failed to get transaction status for batch {BatchId}: {Error}", batch.Id, statusResult.Error.Message);
+                            _logger.LogError("Failed to get transaction status for batch {BatchId}, TxHash={BlockchainTxHash}, BatchCorrelationId={BatchCorrelationId}: {Error}",
+                                batch.Id, batch.TxHash, batchCorrelationId, statusResult.Error.Message);
                             
                             if (IsTransientError(statusResult.Error))
                             {
-                                continue; // Wait and try again next poll
+                                _metrics?.RetryCount.Inc();
+                                continue;
                             }
                             
                             failedReason = $"Transaction lookup failed permanently: {statusResult.Error.Message}";
@@ -105,7 +121,6 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                             }
                             else 
                             {
-                                // Pending or NotFound
                                 var waitTime = DateTime.UtcNow - batch.CreatedAt;
                                 if (waitTime.TotalMinutes > 30)
                                 {
@@ -113,14 +128,14 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                                 }
                                 else
                                 {
-                                    continue; // Keep waiting
+                                    continue;
                                 }
                             }
                         }
                     }
                     else
                     {
-                        _logger.LogWarning("Batch {BatchId} has null TxHash. Checking on-chain state...", batch.Id);
+                        _logger.LogWarning("Batch {BatchId} has null TxHash. Checking on-chain state... BatchCorrelationId={BatchCorrelationId}", batch.Id, batchCorrelationId);
                         
                         var batchResult = await blockchainService.GetBatchAsync(batch.Id.ToString(), ct);
                         
@@ -138,29 +153,39 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                         }
                         else
                         {
-                            _logger.LogError("Failed to query batch metadata for batch {BatchId}: {Error}", batch.Id, batchResult.Error.Message);
+                            _logger.LogError("Failed to query batch metadata for batch {BatchId}, BatchCorrelationId={BatchCorrelationId}: {Error}",
+                                batch.Id, batchCorrelationId, batchResult.Error.Message);
                             
                             if (IsTransientError(batchResult.Error))
                             {
-                                continue; // Wait and retry next poll
+                                _metrics?.RetryCount.Inc();
+                                continue;
                             }
                             
                             failedReason = $"Batch metadata lookup failed permanently: {batchResult.Error.Message}";
                         }
                     }
 
+                    recoverySw.Stop();
+
                     if (isConfirmed)
                     {
+                        _logger.LogInformation("Batch {BatchId} recovered as Confirmed. TxHash={BlockchainTxHash}, ElapsedMs={ElapsedMs}",
+                            batch.Id, batch.TxHash, recoverySw.ElapsedMilliseconds);
                         await FinalizeBatchSuccessAsync(dbContext, batch, ct);
                     }
                     else if (failedReason != null)
                     {
+                        _logger.LogWarning("Batch {BatchId} failed recovery. Reason={Reason}, ElapsedMs={ElapsedMs}",
+                            batch.Id, failedReason, recoverySw.ElapsedMilliseconds);
                         await FinalizeBatchFailedAsync(dbContext, batch, failedReason, ct);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to recover pending batch {BatchId}", batch.Id);
+                    recoverySw.Stop();
+                    _logger.LogError(ex, "Failed to recover pending batch {BatchId}, BatchCorrelationId={BatchCorrelationId}, ElapsedMs={ElapsedMs}",
+                        batch.Id, batchCorrelationId, recoverySw.ElapsedMilliseconds);
                 }
             }
         }
@@ -170,13 +195,20 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
             var workerId = Guid.NewGuid().ToString();
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<ChainDegreeDbContext>();
-            var degreeRepo = scope.ServiceProvider.GetRequiredService<IDegreeRepository>();
             var merkleTreeService = scope.ServiceProvider.GetRequiredService<IMerkleTreeService>();
             var blockchainService = scope.ServiceProvider.GetRequiredService<IBlockchainService>();
 
-            await using var claimTransaction = await dbContext.Database.BeginTransactionAsync(ct);
-
             var now = DateTime.UtcNow;
+
+            var totalQueueCount = await dbContext.Degrees
+                .CountAsync(d => d.Status == StatusEnum.Pending_Confirmation || d.Status == StatusEnum.Pending_Update || d.Status == StatusEnum.Pending_Revocation, ct);
+            _metrics?.QueueLength.Set(totalQueueCount);
+
+            var orphanedLeases = await dbContext.DegreeProcessingRecords
+                .CountAsync(pr => pr.State == "Processing" && pr.LeaseUntil != null && pr.LeaseUntil < now, ct);
+            _metrics?.LeaseOrphanCount.Set(orphanedLeases);
+
+            await using var claimTransaction = await dbContext.Database.BeginTransactionAsync(ct);
             
             var availableDegreeIds = await dbContext.Degrees
                 .Where(d => d.Status == StatusEnum.Pending_Confirmation || d.Status == StatusEnum.Pending_Update || d.Status == StatusEnum.Pending_Revocation)
@@ -256,6 +288,19 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 var batchId = Guid.NewGuid();
                 var shortGuid = Guid.NewGuid().ToString("N").Substring(0, 8);
                 var batchName = $"BATCH_{instCode.ToUpperInvariant()}_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{shortGuid}";
+                var batchCorrelationId = Guid.NewGuid().ToString();
+
+                using var batchScope = _logger.BeginScope(new Dictionary<string, object>
+                {
+                    ["BatchCorrelationId"] = batchCorrelationId,
+                    ["BatchId"] = batchId,
+                    ["InstitutionId"] = institutionId
+                });
+
+                var totalStopwatch = Stopwatch.StartNew();
+
+                _logger.LogInformation("Processing batch {BatchId} with {DegreeCount} degrees. BatchCorrelationId={BatchCorrelationId}",
+                    batchId, institutionDegrees.Count, batchCorrelationId);
 
                 var leafHashes = new List<string>();
                 foreach (var item in institutionItems)
@@ -271,7 +316,13 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                     }
                 }
 
+                var merkleStopwatch = Stopwatch.StartNew();
                 var treeResult = merkleTreeService.BuildTree(leafHashes);
+                merkleStopwatch.Stop();
+
+                _metrics?.MerkleBuildTime.Observe(merkleStopwatch.Elapsed.TotalSeconds);
+                _logger.LogInformation("Merkle tree built for batch {BatchId}. Root={MerkleRoot}, LeafCount={LeafCount}, ElapsedMs={ElapsedMs}",
+                    batchId, treeResult.MerkleRoot, leafHashes.Count, merkleStopwatch.ElapsedMilliseconds);
 
                 var batchRecord = new BatchRecord
                 {
@@ -291,6 +342,7 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 Result<AnchorResult>? anchorResult = null;
                 string? txError = null;
 
+                var txStopwatch = Stopwatch.StartNew();
                 int maxRetries = 3;
                 for (int retry = 0; retry < maxRetries; retry++)
                 {
@@ -312,21 +364,37 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                     
                     if (IsTransientError(result.Error) && retry < maxRetries - 1)
                     {
+                        _metrics?.RetryCount.Inc();
+                        _logger.LogWarning("Transient failure in AnchorMerkleRoot for batch {BatchId}. Retrying attempt {Attempt}. Reason={Reason}",
+                            batchId, retry + 1, txError);
                         await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, retry)), ct);
                         continue;
                     }
                     
-                    // Permanent error or max retries reached
                     break;
                 }
 
+                txStopwatch.Stop();
+                _metrics?.BlockchainTxTime.Observe(txStopwatch.Elapsed.TotalSeconds);
+
+                totalStopwatch.Stop();
+
                 if (anchorResult != null && anchorResult.IsSuccess)
                 {
-                    batchRecord.TxHash = anchorResult.Value.TransactionHash;
+                    var txHash = anchorResult.Value.TransactionHash;
+                    batchRecord.TxHash = txHash;
                     await dbContext.SaveChangesAsync(ct);
+
+                    _metrics?.BatchLatency.Observe(totalStopwatch.Elapsed.TotalSeconds);
+                    _metrics?.BatchesProcessed.Inc();
+
+                    _logger.LogInformation("Batch {BatchId} confirmed. TxHash={BlockchainTxHash}, TotalElapsedMs={ElapsedMs}",
+                        batchId, txHash, totalStopwatch.ElapsedMilliseconds);
                 }
                 else
                 {
+                    _metrics?.BatchesFailed.Inc();
+
                     if (anchorResult != null && !IsTransientError(anchorResult.Error))
                     {
                         _logger.LogError("Permanent failure executing AnchorMerkleRoot for batch {BatchId}: {Error}", batchId, txError);
@@ -396,7 +464,7 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 await dbContext.SaveChangesAsync(ct);
                 await saveTransaction.CommitAsync(ct);
                 
-                _logger.LogInformation("Batch {BatchId} finalized successfully.", batchRecord.Id);
+                _logger.LogInformation("Batch {BatchId} finalized successfully. TxHash={BlockchainTxHash}", batchRecord.Id, batchRecord.TxHash);
             }
             catch (Exception ex)
             {
