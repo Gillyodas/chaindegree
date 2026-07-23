@@ -4,6 +4,7 @@ using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Infrastructure.Configurations;
 using ChainDegree.Core.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Prometheus;
 using Scalar.AspNetCore;
 
 using System.Threading.Tasks;
@@ -114,6 +115,7 @@ namespace ChainDegree.API
             app.UseAuthorization();
 
             app.MapHealthChecks("/health");
+            app.MapMetrics();
             app.MapControllers();
 
             app.Run();

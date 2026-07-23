@@ -42,6 +42,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddScoped<IDegreeRepository, DegreeRepository>();
             services.AddScoped<Core.Application.Abstractions.Queries.IBatchQueryService, BatchTrackingService>();
             services.AddScoped<IBlockchainService, NethereumBlockchainService>();
+            services.AddSingleton<Monitoring.WorkerMetrics>();
 
             // Register configurations
             services.Configure<OutboxOptions>(configuration.GetSection(OutboxOptions.SectionName));
