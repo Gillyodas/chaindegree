@@ -85,3 +85,36 @@ Sau khi deploy thành công, cập nhật địa chỉ contract mới từ file 
     - Sửa đổi tham số cấu hình `Blockchain__ChainId` trong `.env` backend thành một mã chain sai (ví dụ: `1234` thay vì `2026`).
     - Khởi chạy Backend API/Worker.
     - **Kỳ vọng:** Ứng dụng ném lỗi và dừng ngay lập tức tại `BlockchainStartupValidatorService` thay vì chạy ngầm với cấu hình lỗi.
+
+---
+
+## 4. Giám Sát, Thử Nghiệm Tải & Phục Hồi (Phase 4: Observability, Load Testing & DR)
+
+### 4.1. Khởi chạy Monitoring Stack (Prometheus & Grafana)
+Thực hiện khởi động stack giám sát kết hợp với mạng blockchain:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+```
+- **Prometheus UI**: `http://localhost:9090` (xem danh sách 5 Besu targets & Backend API tại `/targets`).
+- **Grafana UI**: `http://localhost:3000` (đăng nhập: `admin` / `admin`).
+  - Access Dashboard **Besu Network Health**: Theo dõi Block height, Peers, JVM memory, TxPool.
+  - Access Dashboard **Worker Health**: Theo dõi Queue length, Latency, Throughput, Retry count.
+
+### 4.2. Thử nghiệm Tải & Benchmark (Load Testing)
+Chạy công cụ benchmark C# Console App từ thư mục gốc giải pháp:
+```bash
+dotnet run --project apps/blockchain/tests/load-test/ChainDegree.LoadTest.csproj
+```
+- Chạy kịch bản cụ thể:
+  ```bash
+  dotnet run --project apps/blockchain/tests/load-test/ChainDegree.LoadTest.csproj -- LT-1
+  dotnet run --project apps/blockchain/tests/load-test/ChainDegree.LoadTest.csproj -- LT-3
+  ```
+
+### 4.3. Phục hồi sau sự cố (Disaster Recovery Backup)
+Thực thi script backup SQL Server DB định kỳ:
+```bash
+./scripts/backup-db.sh
+```
+File backup `.bak` được sinh ra tự động tại thư mục mount volume `/var/opt/mssql/backup` của SQL Server container.
+
