@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'besu-nodes'
+    scrape_interval: 15s
+    static_configs:
+      - targets:
+          - 'besu-validator1:9545'
+          - 'besu-validator2:9545'
+          - 'besu-validator3:9545'
+          - 'besu-validator4:9545'
+          - 'besu-rpc:9545'
+        labels:
+          environment: 'consortium'
+
+  - job_name: 'chaindegree-backend'
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:5000'
+        labels:
+          environment: 'consortium'
