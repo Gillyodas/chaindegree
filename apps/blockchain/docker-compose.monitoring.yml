@@ -1,7 +1,3 @@
-networks:
-  blockchain_network:
-    name: blockchain_network
-
 services:
   prometheus:
     image: prom/prometheus:v2.47.2
