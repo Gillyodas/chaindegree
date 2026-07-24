@@ -4,8 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Crypto;
-using ChainDegree.Core.Domain.Degrees.Entities;
-using ChainDegree.Core.Domain.Degrees.ValueObjects;
+using ChainDegree.Core.Domain.Degrees.Interfaces;
 using ChainDegree.Core.Infrastructure.Cryptography.Services;
 
 namespace ChainDegree.LoadTest
@@ -77,10 +76,10 @@ namespace ChainDegree.LoadTest
                     ["issueDate"] = "2026-07-22"
                 };
 
-                var canonicalJson = canonicalizer.Canonicalize(plainData);
+                var canonicalJson = canonicalizer.Canonicalize(plainData).Value;
                 var salt = Guid.NewGuid().ToString("N");
-                var hash = hashService.ComputeHash(canonicalJson + salt);
-                hashes.Add(hash);
+                var hashResult = hashService.HashData(canonicalJson, salt);
+                hashes.Add(hashResult.Value);
             }
             hashSw.Stop();
 
@@ -132,8 +131,9 @@ namespace ChainDegree.LoadTest
                 var hashes = new List<string>();
                 for (int i = 0; i < ratePerSec; i++)
                 {
-                    var canonicalJson = canonicalizer.Canonicalize(new { id = i, sec = s });
-                    hashes.Add(hashService.ComputeHash(canonicalJson + Guid.NewGuid().ToString()));
+                    var canonicalJson = canonicalizer.Canonicalize(new { id = i, sec = s }).Value;
+                    var salt = Guid.NewGuid().ToString("N");
+                    hashes.Add(hashService.HashData(canonicalJson, salt).Value);
                 }
                 var tree = merkleService.BuildTree(hashes);
                 secSw.Stop();
