@@ -3,24 +3,29 @@ import * as fs from "fs";
 import * as path from "path";
 
 async function main() {
-  const EXPECTED_CHAIN_ID = 1337n;
-
-  // 1. Fetch current network details
   const network = await ethers.provider.getNetwork();
   console.log(`Connecting to network: ${network.name}`);
   console.log(`Actual ChainId: ${network.chainId}`);
 
-  // 2. Fail Fast: Check ChainId
-  if (network.chainId !== EXPECTED_CHAIN_ID) {
-    console.error(`[ERROR] ChainId mismatch! Expected ${EXPECTED_CHAIN_ID}, got ${network.chainId}.`);
+  // Fail-Fast: Verify target network ChainId matches expected network configuration
+  const expectedChainIdMap: Record<string, bigint> = {
+    besuLocal: 1337n,
+    besuConsortium: 2026n,
+    hardhat: 31337n
+  };
+
+  const expectedChainId = expectedChainIdMap[network.name] ?? (network.chainId === 2026n ? 2026n : 1337n);
+
+  if (network.chainId !== expectedChainId) {
+    console.error(`[ERROR] ChainId mismatch for network '${network.name}'! Expected ${expectedChainId}, got ${network.chainId}.`);
     process.exit(1);
   }
-  console.log("[OK] ChainId matches expected development ChainId (1337).");
+  console.log(`[OK] ChainId matches expected ChainId (${expectedChainId}) for network '${network.name}'.`);
 
   // 3. Deploy contract
   const DegreeAnchor = await ethers.getContractFactory("DegreeAnchor");
   console.log("Deploying DegreeAnchor...");
-  const contract = await DegreeAnchor.deploy();
+  const contract = await DegreeAnchor.deploy({ gasPrice: 0 });
   await contract.waitForDeployment();
 
   const contractAddress = await contract.getAddress();
