@@ -24,6 +24,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
+      - --host-allowlist=*
+      - --metrics-host-allowlist=*
     ports:
       - "30303:30303"
     volumes:
@@ -52,6 +54,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
+      - --host-allowlist=*
+      - --metrics-host-allowlist=*
     ports:
       - "30304:30303"
     volumes:
@@ -80,6 +84,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
+      - --host-allowlist=*
+      - --metrics-host-allowlist=*
     ports:
       - "30305:30303"
     volumes:
@@ -108,6 +114,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
+      - --host-allowlist=*
+      - --metrics-host-allowlist=*
     ports:
       - "30306:30303"
     volumes:
@@ -138,10 +146,11 @@ services:
       - --rpc-http-port=8545
       - --rpc-http-api=ETH,NET,WEB3
       - --rpc-http-cors-origins=*
-      - --host-allowlist=localhost,besu-rpc,backend,127.0.0.1,172.28.0.15
+      - --host-allowlist=*
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
+      - --metrics-host-allowlist=*
     ports:
       - "8545:8545"
       - "30307:30303"
