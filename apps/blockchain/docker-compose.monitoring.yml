@@ -1,8 +1,6 @@
-version: '3.8'
-
 networks:
   blockchain_network:
-    external: true
+    name: blockchain_network
 
 services:
   prometheus:

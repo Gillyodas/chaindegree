@@ -1,9 +1,9 @@
-version: '3.8'
-
 networks:
   backend_network:
+    name: backend_network
     driver: bridge
   blockchain_network:
+    name: blockchain_network
     driver: bridge
     ipam:
       config:
