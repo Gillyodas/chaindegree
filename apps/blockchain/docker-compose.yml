@@ -24,8 +24,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
-      - --host-allowlist=*
-      - --metrics-host-allowlist=*
+      - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
+      - --metrics-host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
     ports:
       - "30303:30303"
     volumes:
@@ -54,8 +54,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
-      - --host-allowlist=*
-      - --metrics-host-allowlist=*
+      - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
+      - --metrics-host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
     ports:
       - "30304:30303"
     volumes:
@@ -84,8 +84,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
-      - --host-allowlist=*
-      - --metrics-host-allowlist=*
+      - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
+      - --metrics-host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
     ports:
       - "30305:30303"
     volumes:
@@ -114,8 +114,8 @@ services:
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
-      - --host-allowlist=*
-      - --metrics-host-allowlist=*
+      - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
+      - --metrics-host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
     ports:
       - "30306:30303"
     volumes:
@@ -146,11 +146,11 @@ services:
       - --rpc-http-port=8545
       - --rpc-http-api=ETH,NET,WEB3
       - --rpc-http-cors-origins=*
-      - --host-allowlist=*
+      - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
-      - --metrics-host-allowlist=*
+      - --metrics-host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
     ports:
       - "8545:8545"
       - "30307:30303"
