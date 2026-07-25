@@ -31,6 +31,18 @@ async function main() {
   const contractAddress = await contract.getAddress();
   console.log(`[SUCCESS] DegreeAnchor deployed to: ${contractAddress}`);
 
+  // 4. Authorize additional anchor signers (e.g., validator nodes / secondary signers) via env variable
+  const additionalAnchorsRaw = process.env.ADDITIONAL_ANCHOR_ADDRESSES || process.env.SECONDARY_ANCHOR_ADDRESS;
+  if (additionalAnchorsRaw) {
+    const addresses = additionalAnchorsRaw.split(",").map((a) => a.trim()).filter((a) => a.length > 0);
+    for (const address of addresses) {
+      console.log(`Authorizing additional anchor signer: ${address}...`);
+      const tx = await contract.addAnchorService(address, { gasPrice: 0 });
+      await tx.wait();
+      console.log(`[SUCCESS] Authorized additional anchor signer: ${address}`);
+    }
+  }
+
   // 4. Save contract address to a local JSON file for downstream integration (Smoke test & backend config)
   const deployInfoPath = path.join(__dirname, "../deployed-address.json");
   fs.writeFileSync(
