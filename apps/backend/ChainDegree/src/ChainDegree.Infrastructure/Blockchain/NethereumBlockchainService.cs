@@ -149,7 +149,7 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
 
         private DomainError MapExceptionToError(Exception ex)
         {
-            _logger.LogError(ex, "Blockchain interaction failed.");
+            _logger.LogError(ex, "Blockchain interaction failed: {ExceptionType} - {Message}", ex.GetType().Name, ex.Message);
 
             var message = ex.Message.ToLowerInvariant();
 
@@ -163,7 +163,7 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
                 return BlockchainErrors.NetworkTimeout;
             }
 
-            if (ex is System.Net.Http.HttpRequestException || message.Contains("connection") || message.Contains("refused") || message.Contains("503"))
+            if (ex is System.Net.Http.HttpRequestException || message.Contains("connection refused") || message.Contains("failed to connect") || message.Contains("503"))
             {
                 return BlockchainErrors.RpcUnavailable;
             }
@@ -175,10 +175,10 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
 
             if (ex.GetType().FullName?.Contains("Rpc") == true)
             {
-                return BlockchainErrors.RpcUnavailable;
+                return new DomainError("Blockchain.RpcError", ex.Message);
             }
 
-            throw ex;
+            return new DomainError("Blockchain.UnexpectedError", ex.Message);
         }
 
         private byte[] EnsureBytes32(string hex)
