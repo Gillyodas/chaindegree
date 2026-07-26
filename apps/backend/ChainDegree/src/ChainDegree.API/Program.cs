@@ -109,13 +109,14 @@ namespace ChainDegree.API
                 }
             }
 
+            app.MapMetrics();
+
             app.UseHttpsRedirection();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapHealthChecks("/health");
-            app.MapMetrics();
             app.MapControllers();
 
             app.Run();
