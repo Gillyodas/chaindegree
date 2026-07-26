@@ -50,7 +50,9 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
                     BatchId = batchIdBytes,
                     MerkleRoot = merkleRootBytes,
                     InstitutionId = instIdBytes,
-                    ActionType = actionType
+                    ActionType = actionType,
+                    GasPrice = new Nethereum.Hex.HexTypes.HexBigInteger(0),
+                    Gas = new Nethereum.Hex.HexTypes.HexBigInteger(3000000)
                 };
 
                 var handler = _web3.Eth.GetContractTransactionHandler<AnchorMerkleRootFunction>();

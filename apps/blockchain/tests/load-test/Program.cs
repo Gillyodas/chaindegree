@@ -153,7 +153,6 @@ namespace ChainDegree.LoadTest
 
                     Console.WriteLine($"  [On-Chain] Anchoring Batch {b + 1}/{numBatches} (Root: {batchRoot.Substring(0, 16)}...)...");
                     var result = await blockchainService.AnchorMerkleRootAsync(batchId.ToString(), batchRoot, instId.ToString(), "Issue");
-
                     if (result.IsSuccess)
                     {
                         successfulOnChainTxs++;
@@ -161,7 +160,7 @@ namespace ChainDegree.LoadTest
                     }
                     else
                     {
-                        Console.WriteLine($"  [On-Chain FAILED] Batch {b + 1}/{numBatches} failed: {result.Error.Message}");
+                        Console.WriteLine($"  [On-Chain FAILED] Batch {b + 1}/{numBatches} failed: Code={result.Error.Code}, Msg={result.Error.Message}");
                     }
                 }
                 txSw.Stop();
