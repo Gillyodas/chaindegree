@@ -69,6 +69,32 @@ namespace ChainDegree.Infrastructure.Tests.BackgroundWorkers
         }
 
         [Fact]
+        [Trait("Category", "WorkerMetrics")]
+        public void WorkerMetrics_QueueLength_And_BatchesProcessed_ShouldRecordValueChanges()
+        {
+            // Arrange
+            var metrics = new WorkerMetrics();
+            var initialBatches = metrics.BatchesProcessed.Value;
+
+            // Act - Set and modify QueueLength
+            metrics.QueueLength.Set(42);
+            Assert.Equal(42, metrics.QueueLength.Value);
+
+            metrics.QueueLength.Inc(8);
+            Assert.Equal(50, metrics.QueueLength.Value);
+
+            metrics.QueueLength.Dec(15);
+            Assert.Equal(35, metrics.QueueLength.Value);
+
+            // Act - Increment BatchesProcessed
+            metrics.BatchesProcessed.Inc();
+            metrics.BatchesProcessed.Inc(3);
+
+            // Assert
+            Assert.Equal(initialBatches + 4, metrics.BatchesProcessed.Value);
+        }
+
+        [Fact]
         [Trait("Category", "WorkerLogging")]
         public void TestLogger_ShouldCaptureScope_WithBatchId_BlockchainTxHash_AndCorrelationId()
         {
