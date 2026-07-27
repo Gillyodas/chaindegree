@@ -8,6 +8,7 @@ using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Degrees.Entities;
 using ChainDegree.Core.Domain.Degrees.Enums;
 using ChainDegree.Core.Domain.Degrees.ValueObjects;
+using ChainDegree.Core.Domain.Universities;
 using ChainDegree.Core.Domain.Students;
 using ChainDegree.Core.Infrastructure.Persistence.Locking;
 using ChainDegree.Core.Infrastructure.Persistence.Entities;
@@ -87,18 +88,34 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
 
         public async Task<VerificationSnapshot?> GetVerificationSnapshotAsync(string degreeCode, int? version, CancellationToken ct = default)
         {
-            var degree = await _context.Degrees.FirstOrDefaultAsync(x => x.DegreeCode == degreeCode, ct);
-            if (degree == null)
+            var degreeInfo = await (
+                from d in _context.Degrees.AsNoTracking()
+                where d.DegreeCode == degreeCode
+                join i in _context.EducationInstitutions.AsNoTracking() on d.InstitutionId equals i.Id into instGroup
+                from i in instGroup.DefaultIfEmpty()
+                join s in _context.Students.AsNoTracking() on d.StudentId equals s.Id into studentGroup
+                from s in studentGroup.DefaultIfEmpty()
+                select new
+                {
+                    Degree = d,
+                    InstitutionName = i != null ? i.Name : "Unknown Institution",
+                    StudentFullName = s != null ? s.FullName : "Unknown Student"
+                }
+            ).FirstOrDefaultAsync(ct);
+
+            if (degreeInfo == null)
             {
                 return null;
             }
 
-            var student = await _context.Students.FirstOrDefaultAsync(x => x.Id == degree.StudentId, ct);
-            var studentFullName = student?.FullName ?? "Unknown Student";
+            var degree = degreeInfo.Degree;
+            var studentFullName = degreeInfo.StudentFullName;
+            var institutionName = degreeInfo.InstitutionName;
 
             if (version.HasValue && version.Value < degree.CurrentVersion)
             {
                 var historicalVersion = await _context.DegreeVersions
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(x => x.DegreeId == degree.Id && x.Version == version.Value, ct);
 
                 if (historicalVersion == null)
@@ -114,16 +131,19 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                     txHash: historicalVersion.BlockchainTxHash,
                     merkleProofJson: historicalVersion.MerkleProofJson,
                     version: historicalVersion.Version,
-                    status: degree.Status, // Status changes apply globally
+                    status: degree.Status,
                     studentFullName: studentFullName,
                     major: historicalVersion.Major,
                     classification: historicalVersion.Classification,
                     studentId: degree.StudentId,
-                    issuedAt: degree.IssuedAt
+                    issuedAt: degree.IssuedAt,
+                    institutionName: institutionName,
+                    institutionId: degree.InstitutionId
                 );
             }
 
             var batchDegreeRecord = await _context.BatchDegreeRecords
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
 
             return new VerificationSnapshot(
@@ -141,7 +161,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                 major: degree.Major,
                 classification: degree.Classification,
                 studentId: degree.StudentId,
-                issuedAt: degree.IssuedAt
+                issuedAt: degree.IssuedAt,
+                institutionName: institutionName,
+                institutionId: degree.InstitutionId
             );
         }
 
@@ -178,9 +200,11 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                 return null;
             }
         }
+
         public async Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, CancellationToken ct = default)
         {
             var record = await _context.BatchDegreeRecords
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.DegreeId == degreeId, ct);
             return record?.BatchId;
         }
