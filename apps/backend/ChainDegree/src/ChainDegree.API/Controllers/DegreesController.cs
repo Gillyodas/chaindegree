@@ -154,33 +154,40 @@ namespace ChainDegree.API.Controllers
 
         [HttpPost("verify")]
         [AllowAnonymous]
+        [RequestSizeLimit(65_536)]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("verify-degree")]
         [ProducesResponseType(typeof(VerifyDegreeResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(VerifyDegreeErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(VerifyDegreeErrorResponse), StatusCodes.Status422UnprocessableEntity)]
+        [ProducesResponseType(typeof(VerifyDegreeErrorResponse), StatusCodes.Status404NotFound)]
         public async Task<IActionResult> VerifyDegree(
             [FromBody] VerifyDegreeRequest request,
             CancellationToken ct)
         {
-            var query = new VerifyDegreeQuery(request.DegreeCode, request.Version, request.IssuedAt);
+            var query = new VerifyDegreeQuery(request.DegreeCode, request.Version, request.IssuedAt, request.PlainDataJson, request.Salt);
             var result = await _sender.Send(query, ct);
 
             if (result.IsFailure)
             {
+                if (result.Error == DegreeErrors.InvalidSaltFormat)
+                {
+                    return BadRequest(new VerifyDegreeErrorResponse(false, "INVALID_SALT_FORMAT", "Salt must be a 16-character hexadecimal string."));
+                }
                 if (result.Error == DegreeErrors.CryptoHashMismatch)
                 {
-                    return UnprocessableEntity(new { error = "CRYPTO_HASH_MISMATCH" });
+                    return UnprocessableEntity(new VerifyDegreeErrorResponse(false, "CRYPTO_HASH_MISMATCH", "Verification failed. The provided data does not match the official records."));
                 }
                 if (result.Error == DegreeErrors.BlockchainInvalid)
                 {
-                    return UnprocessableEntity(new { error = "BLOCKCHAIN_INVALID" });
+                    return UnprocessableEntity(new VerifyDegreeErrorResponse(false, "BLOCKCHAIN_INVALID", "Verification failed. The degree record could not be validated against the blockchain."));
                 }
                 if (result.Error == DegreeErrors.NotFound)
                 {
-                    return NotFound(new { error = "DEGREE_NOT_FOUND" });
+                    return NotFound(new VerifyDegreeErrorResponse(false, "DEGREE_NOT_FOUND", "No degree found with the specified code."));
                 }
                 if (result.Error == DegreeErrors.UnsupportedVersion)
                 {
-                    return NotFound(new { error = "UNSUPPORTED_VERSION" });
+                    return NotFound(new VerifyDegreeErrorResponse(false, "UNSUPPORTED_VERSION", "The specified version does not exist for this degree."));
                 }
 
                 return HandleFailure(result);

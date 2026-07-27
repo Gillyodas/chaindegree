@@ -4,6 +4,7 @@ using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Infrastructure.Configurations;
 using ChainDegree.Core.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.RateLimiting;
 using Prometheus;
 using Scalar.AspNetCore;
 
@@ -66,6 +67,17 @@ namespace ChainDegree.API
                 options.AddPolicy(Roles.System, policy => policy.RequireRole(Roles.System));
             });
 
+            // Register rate limiting for public verify endpoint
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.AddFixedWindowLimiter("verify-degree", config =>
+                {
+                    config.PermitLimit = 30;
+                    config.Window = System.TimeSpan.FromMinutes(1);
+                    config.QueueLimit = 0;
+                });
+            });
+
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
@@ -73,6 +85,7 @@ namespace ChainDegree.API
             app.UseMiddleware<ChainDegree.API.Middleware.CorrelationIdMiddleware>();
 
             app.UseCors("AllowAll");
+            app.UseRateLimiter();
 
             if (app.Environment.IsDevelopment())
             {
