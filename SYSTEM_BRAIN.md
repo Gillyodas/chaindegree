@@ -82,4 +82,19 @@ Documenting the core architecture, classes, and logic of ChainDegree.
 - **[GlobalExceptionFilterAttribute](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/GlobalExceptionFilterAttribute.cs)**: Handles unhandled exceptions by pattern matching on `IProblemException` and using `ChainDegreeProblemDetailsFactory` to create the unified error response.
 - **[ApiControllerBase](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/ApiControllerBase.cs)**: Base API controller providing utility methods (`ProcessResult`, `HandleFailure`) that map domain errors to HTTP results which are then processed by the factory.
 
+---
+
+## 5. Degree Verification & Public Portal (`Phase 3`)
+
+- **[VerificationSource](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/Degrees/Enums/VerificationSource.cs)**: Domain enum for verification source (`Blockchain_Merkle_Root`, `Local_Database`).
+- **[VerificationSnapshot](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Domain/Degrees/ValueObjects/VerificationSnapshot.cs)**: Snapshot containing degree data, crypto hashes, Merkle proof, version, status, and institution details (`InstitutionName`, `InstitutionId`).
+- **[VerifyDegreeQuery](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Degrees/Queries/VerifyDegree/VerifyDegreeQuery.cs)**: Query supporting dual verification modes:
+  - **QR Payload Mode**: `DegreeCode` + `Version?` + `IssuedAt?`
+  - **Direct Data Mode**: `DegreeCode` + `PlainDataJson` + `Salt` (with canonicalization)
+- **[VerifyDegreeQueryHandler](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Degrees/Queries/VerifyDegree/VerifyDegreeQueryHandler.cs)**: Dual-verification handler executing snapshot resolution, status check, local integrity check (canonicalization + hashing), blockchain Merkle proof validation, and selective behavior logging.
+- **[VerifyDegreeResponse](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.Application/Degrees/Queries/VerifyDegree/VerifyDegreeResponse.cs)**: Public verification response object with `Verified`, `Status`, `VerificationSource`, `InstitutionName`, degree details, and `BlockchainDetails`.
+- **[VerifyDegreeErrorResponse](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/Contracts/Degrees/VerifyDegreeErrorResponse.cs)**: Structured error response contract preventing internal data leakage.
+- **[DegreesController.VerifyDegree](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/Controllers/DegreesController.cs#L155-L190)**: Public endpoint (`POST /api/v1/institutions/degrees/verify`) hardened with `[AllowAnonymous]`, `[RequestSizeLimit(65_536)]` (64KB DoS protection), and `[EnableRateLimiting("verify-degree")]` (30 req/min enumeration protection).
+
+
 
