@@ -199,8 +199,10 @@ namespace ChainDegree.API.Tests.Controllers
             var response = new VerifyDegreeResponse(
                 Verified: true,
                 Status: "Confirmed",
+                VerificationSource: ChainDegree.Core.Domain.Degrees.Enums.VerificationSource.Blockchain_Merkle_Root,
                 DegreeCode: "DEG-2026-000001",
                 Version: 1,
+                InstitutionName: "Test Institution",
                 StudentFullName: "Nguyen Van A",
                 Major: "IT",
                 Classification: "Gioi",
@@ -234,10 +236,9 @@ namespace ChainDegree.API.Tests.Controllers
 
             // Assert
             var unprocessableResult = Assert.IsType<UnprocessableEntityObjectResult>(result);
-            Assert.NotNull(unprocessableResult.Value);
-            var errorProp = unprocessableResult.Value.GetType().GetProperty("error");
-            Assert.NotNull(errorProp);
-            Assert.Equal("CRYPTO_HASH_MISMATCH", errorProp.GetValue(unprocessableResult.Value));
+            var err = Assert.IsType<VerifyDegreeErrorResponse>(unprocessableResult.Value);
+            Assert.False(err.Verified);
+            Assert.Equal("CRYPTO_HASH_MISMATCH", err.ErrorCode);
         }
 
         [Fact]
@@ -253,10 +254,9 @@ namespace ChainDegree.API.Tests.Controllers
 
             // Assert
             var unprocessableResult = Assert.IsType<UnprocessableEntityObjectResult>(result);
-            Assert.NotNull(unprocessableResult.Value);
-            var errorProp = unprocessableResult.Value.GetType().GetProperty("error");
-            Assert.NotNull(errorProp);
-            Assert.Equal("BLOCKCHAIN_INVALID", errorProp.GetValue(unprocessableResult.Value));
+            var err = Assert.IsType<VerifyDegreeErrorResponse>(unprocessableResult.Value);
+            Assert.False(err.Verified);
+            Assert.Equal("BLOCKCHAIN_INVALID", err.ErrorCode);
         }
 
         [Fact]
@@ -272,10 +272,9 @@ namespace ChainDegree.API.Tests.Controllers
 
             // Assert
             var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-            Assert.NotNull(notFoundResult.Value);
-            var errorProp = notFoundResult.Value.GetType().GetProperty("error");
-            Assert.NotNull(errorProp);
-            Assert.Equal("DEGREE_NOT_FOUND", errorProp.GetValue(notFoundResult.Value));
+            var err = Assert.IsType<VerifyDegreeErrorResponse>(notFoundResult.Value);
+            Assert.False(err.Verified);
+            Assert.Equal("DEGREE_NOT_FOUND", err.ErrorCode);
         }
 
         [Fact]
@@ -291,10 +290,27 @@ namespace ChainDegree.API.Tests.Controllers
 
             // Assert
             var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-            Assert.NotNull(notFoundResult.Value);
-            var errorProp = notFoundResult.Value.GetType().GetProperty("error");
-            Assert.NotNull(errorProp);
-            Assert.Equal("UNSUPPORTED_VERSION", errorProp.GetValue(notFoundResult.Value));
+            var err = Assert.IsType<VerifyDegreeErrorResponse>(notFoundResult.Value);
+            Assert.False(err.Verified);
+            Assert.Equal("UNSUPPORTED_VERSION", err.ErrorCode);
+        }
+
+        [Fact]
+        public async Task VerifyDegree_WithInvalidSaltFormat_ReturnsBadRequest()
+        {
+            // Arrange
+            var request = new VerifyDegreeRequest("DEG-2026-000001", null, null, "{}", "bad");
+            _mockSender.Setup(s => s.Send(It.IsAny<VerifyDegreeQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<VerifyDegreeResponse>.Failure(DegreeErrors.InvalidSaltFormat));
+
+            // Act
+            var result = await _controller.VerifyDegree(request, CancellationToken.None);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var err = Assert.IsType<VerifyDegreeErrorResponse>(badRequestResult.Value);
+            Assert.False(err.Verified);
+            Assert.Equal("INVALID_SALT_FORMAT", err.ErrorCode);
         }
     }
 }
