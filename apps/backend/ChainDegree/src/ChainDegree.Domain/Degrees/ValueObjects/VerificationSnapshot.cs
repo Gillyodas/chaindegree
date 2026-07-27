@@ -18,6 +18,8 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
         public string Classification { get; }
         public Guid StudentId { get; }
         public DateTime IssuedAt { get; }
+        public string InstitutionName { get; }
+        public Guid InstitutionId { get; }
 
         public VerificationSnapshot(
             Guid degreeId,
@@ -32,7 +34,9 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
             string major,
             string classification,
             Guid studentId,
-            DateTime issuedAt)
+            DateTime issuedAt,
+            string institutionName,
+            Guid institutionId)
         {
             DegreeId = degreeId;
             DataHash = dataHash;
@@ -47,6 +51,8 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
             Classification = classification;
             StudentId = studentId;
             IssuedAt = issuedAt;
+            InstitutionName = institutionName;
+            InstitutionId = institutionId;
         }
     }
 }

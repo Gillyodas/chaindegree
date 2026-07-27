@@ -57,5 +57,8 @@ namespace ChainDegree.SharedKernel.DomainErrors.Degrees.Degree
 
         public static readonly Error UnsupportedVersion =
             Error.NotFound("Degree.UnsupportedVersion", "The requested version of the degree does not exist.");
+
+        public static readonly Error InvalidSaltFormat =
+            Error.Validation("Degree.InvalidSaltFormat", "Salt must be a 16-character hexadecimal string.");
     }
 }
