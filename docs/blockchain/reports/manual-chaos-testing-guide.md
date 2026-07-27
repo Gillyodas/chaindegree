@@ -1,6 +1,6 @@
 # Hướng Dẫn Thực Hiện Chaos Testing Thủ Công (Manual Chaos Testing Guide)
 
-Tài liệu này cung cấp hướng dẫn từng bước chi tiết (Step-by-step Guide) kèm theo các lệnh PowerShell/Docker, câu truy vấn SQL và nhật ký log kỳ vọng để bạn tự thực hiện **Kiểm Thử Sự Cố (Chaos Testing)** cho hệ thống **ChainDegree**.
+Tài liệu này cung cấp hướng dẫn từng bước chi tiết (Step-by-step Guide) kèm theo các lệnh PowerShell/Docker, câu truy vấn SQL và nhật ký log kỳ vọng để bạn tự thực hiện **Kiểm Thử Sự Cố (Chaos Testing)** đầy đủ **7 Kịch Bản (CT-1 đến CT-7)** cho hệ thống **ChainDegree**.
 
 ---
 
@@ -23,10 +23,10 @@ Tài liệu này cung cấp hướng dẫn từng bước chi tiết (Step-by-st
 
 ---
 
-## 🧪 Kịch Bản 1: Worker Sudden Crash (Tính Bất Biến - Idempotency Core)
+## 🧪 Kịch Bản CT-1: Worker Crash Sau Khi Gửi Transaction (Idempotency Core)
 
 ### 🎯 Mục đích:
-Kiểm tra hiện tượng giao dịch đã gửi lên Blockchain thành công nhưng Worker bị crash ngắt đột ngột trước khi kịp ghi nhận trạng thái `Confirmed` vào SQL Database.
+Kiểm tra hiện tượng giao dịch đã gửi lên Blockchain thành công nhưng Worker bị crash ngắt đột ngột trước khi kịp cập nhật trạng thái `Confirmed` vào SQL Database.
 
 ### 🐾 Các bước thực hiện:
 1. Gửi kịch bản On-Chain Load Test hoặc tạo 1 Batch văn bằng mới:
@@ -51,7 +51,26 @@ Kiểm tra hiện tượng giao dịch đã gửi lên Blockchain thành công n
 
 ---
 
-## 🧪 Kịch Bản 2: Mất 1 Node Validator ($f=1$ Fault Tolerance)
+## 🧪 Kịch Bản CT-2: Worker Crash Trong Khi Build Merkle Tree (Worker Recovery)
+
+### 🎯 Mục đích:
+Kiểm tra tính an toàn khi Worker bị sập trong giai đoạn đang băm dữ liệu và dựng cây Merkle Tree (trước khi gửi giao dịch).
+
+### 🐾 Các bước thực hiện:
+1. Đưa các văn bằng vào hàng chờ `Pending_Confirmation`.
+2. Khởi chạy Worker. Khi màn hình console/log vừa xuất hiện dòng: `Building Merkle tree for batch...`, lập tức tắt đột ngột Worker (`Ctrl + C` hoặc `taskkill`).
+3. Khởi chạy lại Worker:
+   ```powershell
+   dotnet run --project src/ChainDegree.API/ChainDegree.API.csproj --urls "http://0.0.0.0:5000"
+   ```
+
+### ✅ Kết quả Kỳ vọng:
+- Bản ghi `DegreeProcessingRecord` chưa bị khóa vĩnh viễn nhờ cơ chế `LeaseUntil` (10 phút).
+- Khi restart, Worker tự động giải phóng lock cũ, gom lại các văn bằng `Pending_Confirmation` thành batch mới và gửi giao dịch thành công.
+
+---
+
+## 🧪 Kịch Bản CT-3: Mất 1 Node Validator (Fault Tolerance $f=1$)
 
 ### 🎯 Mục đích:
 Kiểm chứng khả năng chịu lỗi Byzantine của thuật toán QBFT khi có 1 trong 4 Validator bị sập ($N=4, f=1$). Mạng vẫn phải đạt Quorum $\lceil 2N/3 \rceil = 3$ nodes active.
@@ -79,33 +98,7 @@ Kiểm chứng khả năng chịu lỗi Byzantine của thuật toán QBFT khi c
 
 ---
 
-## 🧪 Kịch Bản 3: Mất 2 Node Validator ($f+1=2$ Mất Quorum)
-
-### 🎯 Mục đích:
-Kiểm tra hành vi mạng Blockchain khi vượt quá ngưỡng chịu lỗi (mất 2/4 Validator $\rightarrow$ chỉ còn 2 nodes, không đủ 3/4 quorum để đóng block).
-
-### 🐾 Các bước thực hiện:
-1. Ngắt 2 node Validator cùng lúc:
-   ```powershell
-   docker stop besu-validator1 besu-validator2
-   ```
-2. Thực thi gửi giao dịch On-Chain:
-   ```powershell
-   dotnet run --project apps/blockchain/tests/load-test/ChainDegree.LoadTest.csproj LT-1 --on-chain
-   ```
-3. Quan sát hiện tượng:
-   - Giao dịch được gửi vào Mempool nhưng **không có block mới nào được đào** (mạng đứng chờ quorum).
-4. Bật lại 2 Validator:
-   ```powershell
-   docker start besu-validator1 besu-validator2
-   ```
-
-### ✅ Kết quả Kỳ vọng:
-- Khi 2 Validator bật lại, mạng QBFT tự động tái lập đồng thuận, block mới lập tức được đào và giao dịch đang treo trong Mempool được đóng gói thành công.
-
----
-
-## 🧪 Kịch Bản 4: Khởi Động Lại Node RPC Tạm Thời (RPC Resilience)
+## 🧪 Kịch Bản CT-4: Khởi Động Lại Node RPC Tạm Thời (RPC Resilience)
 
 ### 🎯 Mục đích:
 Kiểm tra Backend Worker có tự phục hồi (Retry with Exponential Backoff) khi nút cổng kết nối RPC (`besu-rpc`) bị ngắt tạm thời hay không.
@@ -124,28 +117,81 @@ Kiểm tra Backend Worker có tự phục hồi (Retry with Exponential Backoff)
 
 ---
 
-## 🧪 Kịch Bản 5: Mất Kết Nối SQL Server Database Tạm Thời
+## 🧪 Kịch Bản CT-5: Mạng RPC Bị Thắt Cổ Chai / Latency (Network Delay 10s)
+
+### 🎯 Mục đích:
+Kiểm tra rào chắn xử lý Timeout và Exponential Backoff khi kết nối mạng RPC bị trễ 10s.
+
+### 🐾 Các bước thực hiện:
+1. Tạm thời ngắt card mạng hoặc dùng công cụ giả lập latency/delay 10 giây đối với port 8545:
+   ```powershell
+   # Hoặc stop tạm thời container besu-rpc trong 10 giây
+   docker pause besu-rpc
+   Start-Sleep -Seconds 10
+   docker unpause besu-rpc
+   ```
+2. Quan sát nhật ký log của Worker.
+
+### ✅ Kết quả Kỳ vọng:
+- Worker không bị rò rỉ bộ nhớ hay treo tiến trình vĩnh viễn.
+- Worker log thông điệp `Transient failure... Retrying attempt 1`, thực hiện retry an toàn theo Exponential Backoff và hoàn tất khi RPC khôi phục.
+
+---
+
+## 🧪 Kịch Bản CT-6: Mất Kết Nối SQL Server Database Tạm Thời (DB Failure 30s)
 
 ### 🎯 Mục đích:
 Kiểm tra tính toàn vẹn giao dịch (ACID) khi Database bị ngắt kết nối trong lúc Worker xử lý batch.
 
 ### 🐾 Các bước thực hiện:
-1. Tắt SQL Server Service / Container (hoặc tạm thời ngắt card mạng).
-2. Chạy Backend Worker.
-3. Quan sát log Backend API: Worker bắt được lỗi kết nối DB (`DbUpdateException` / `SqlException`), ghi log `Warning/Error` và giữ trạng thái công việc an toàn.
-4. Mở lại SQL Server.
+1. Tắt SQL Server Service / Container trong 30 giây:
+   ```powershell
+   docker stop sqlserver # Hoặc ngắt dịch vụ MSSQLSERVER
+   Start-Sleep -Seconds 30
+   docker start sqlserver
+   ```
+2. Chạy Backend Worker và quan sát log.
 
 ### ✅ Kết quả Kỳ vọng:
-- Dữ liệu trong Database không bị sai lệch hay mất mát. Chu kỳ Polling tiếp theo của Worker sẽ tiếp tục xử lý mượt mà.
+- Worker bắt được lỗi kết nối DB (`DbUpdateException` / `SqlException`), ghi log `Warning/Error` và rào chắn không làm crash ứng dụng Backend.
+- Khi SQL Server online trở lại, chu kỳ Polling tiếp theo sẽ tự động ghi nhận dữ liệu thành công.
 
 ---
 
-## 📊 Bảng Tổng Kết Kỳ Vọng Kịch Bản Chaos Test
+## 🧪 Kịch Bản CT-7: Mất 2 Node Validator (Consensus Pause & Recovery $f+1=2$)
 
-| Mã Kịch Bản | Tên Kịch Bản | Thao Tác Chaos | Kỳ Vọng Trạng Thái Mạng | Kỳ Vọng Xử Lý Của Backend |
+### 🎯 Mục đích:
+Kiểm tra hành vi mạng Blockchain khi vượt quá ngưỡng chịu lỗi (mất 2/4 Validator $\rightarrow$ chỉ còn 2 nodes, không đủ 3/4 quorum để đóng block).
+
+### 🐾 Các bước thực hiện:
+1. Ngắt 2 node Validator cùng lúc:
+   ```powershell
+   docker stop besu-validator1 besu-validator2
+   ```
+2. Thực thi gửi giao dịch On-Chain:
+   ```powershell
+   dotnet run --project apps/blockchain/tests/load-test/ChainDegree.LoadTest.csproj LT-1 --on-chain
+   ```
+3. Quan sát hiện tượng:
+   - Giao dịch được gửi vào Mempool nhưng **không có block mới nào được đào** (mạng tạm dừng tạo block để chờ đủ quorum).
+4. Bật lại 2 Validator:
+   ```powershell
+   docker start besu-validator1 besu-validator2
+   ```
+
+### ✅ Kết quả Kỳ vọng:
+- Khi 2 Validator bật lại, mạng QBFT tự động tái lập đồng thuận, block mới lập tức được đào và giao dịch đang treo trong Mempool được đóng gói thành công.
+
+---
+
+## 📊 Bảng Tổng Kết Đầy Đủ 7 Kịch Bản Chaos Test
+
+| Mã Kịch Bản | Tên Kịch Bản | Thao Tác Failure Injection | Kỳ Vọng Trạng Thái Mạng | Kỳ Vọng Xử Lý Của Backend |
 |---|---|---|---|---|
-| **CT-1** | Worker Crash | Kill Worker sau khi gửi Tx | Mạng bình thường | Auto-recovery `Confirmed` qua Idempotency |
-| **CT-2** | 1 Validator Down | `docker stop besu-validator1` | 3/4 Nodes Quorum ok | Giao dịch đào thành công (<300ms) |
-| **CT-3** | 2 Validators Down | `docker stop besu-validator1 besu-validator2` | Mất Quorum, dừng tạo block | Chờ 2 node khôi phục và đóng block tự động |
-| **CT-4** | RPC Restart | `docker restart besu-rpc` | RPC ngắt 3s | Worker Retry & kết nối lại mượt mà |
-| **CT-5** | Database Loss | Tắt SQL Server | Mạng blockchain bình thường | Worker ghi log chờ DB online để retry |
+| **CT-1** | Worker Crash (Tx Sent) | Kill Worker ngay sau khi gửi Tx | Mạng bình thường | Auto-recovery `Confirmed` qua Idempotency |
+| **CT-2** | Worker Crash (Build Tree) | Kill Worker khi đang build Merkle | Mạng bình thường | Giải phóng `LeaseUntil` & gom lại batch mới |
+| **CT-3** | Fault Tolerance ($f=1$) | `docker stop besu-validator1` | 3/4 Nodes Quorum ok | Giao dịch đào thành công (<300ms) |
+| **CT-4** | RPC Resilience | `docker restart besu-rpc` | RPC ngắt 3-5s | Worker Retry & kết nối lại mượt mà |
+| **CT-5** | Network Latency | `docker pause/unpause besu-rpc` 10s | Trễ kết nối RPC | Trigger Timeout & Exponential Backoff retry |
+| **CT-6** | DB Failure | Tắt SQL Server 30s | Mạng blockchain bình thường | Worker rào lỗi DB & retry commit khi DB online |
+| **CT-7** | Consensus Pause | `docker stop besu-validator1 besu-validator2` | Mất Quorum, tạm dừng đóng block | Chờ 2 node khôi phục và đóng block tự động |
