@@ -37,7 +37,13 @@ Kiểm tra hiện tượng giao dịch đã gửi lên Blockchain thành công n
 3. **Kiểm tra trạng thái trên Blockchain**:
    Mở PowerShell và dùng `curl` gọi RPC kiểm tra trực tiếp Smart Contract:
    ```powershell
-   curl http://localhost:8545 -H "Content-Type: application/json" -Data '{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params":["0x<DE-TX-HASH-CUA-BAN>"],"id":1}'
+   Invoke-RestMethod -Uri http://localhost:8545 -Method Post -ContentType "application/json" -Body '{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params":["<TX HASH>"],"id":1}'
+
+   ```
+
+   ```cmd
+   curl http://localhost:8545 -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionReceipt\",\"params\":[\"<TX HASH>\"],\"id\":1}"
+
    ```
    *Kỳ vọng*: Trả về JSON có `"status": "0x1"` (Giao dịch đã đóng block thành công trên chain).
 4. Khởi chạy lại Backend Worker:
