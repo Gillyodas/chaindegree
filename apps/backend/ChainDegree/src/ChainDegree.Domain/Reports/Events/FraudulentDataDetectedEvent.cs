@@ -1,17 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
+using ChainDegree.Core.Domain.SharedKernel.Interfaces;
 
 namespace ChainDegree.Core.Domain.Reports.Events
 {
-    public class FraudulentDataDetectedEvent
+    public record FraudulentDataDetectedEvent : IDomainEvent
     {
-        public Guid EventId { get; private set; }
-        public Guid UniversityId { get; private set; }
-        public Guid DegreeId { get; private set; }
-        public string ViolationType { get; private set; } = null!;
-        public Guid ReportId { get; private set; }
-        public string ViolationDetails { get; private set; } = null!;
-        public DateTime OccurredOn { get; private set; }
+        public Guid EventId { get; init; } = Guid.NewGuid();
+        public Guid UniversityId { get; init; }
+        public Guid DegreeId { get; init; }
+        public string ViolationType { get; init; } = null!;
+        public Guid ReportId { get; init; }
+        public string ViolationDetails { get; init; } = null!;
+        public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+
+        public FraudulentDataDetectedEvent(Guid universityId, Guid degreeId, string violationType, Guid reportId, string violationDetails)
+        {
+            UniversityId = universityId;
+            DegreeId = degreeId;
+            ViolationType = violationType;
+            ReportId = reportId;
+            ViolationDetails = violationDetails;
+        }
     }
 }
