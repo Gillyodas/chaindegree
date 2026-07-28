@@ -36,7 +36,7 @@ namespace ChainDegree.API.Controllers
         [HttpPost]
         [Authorize(Policy = Roles.Registrar)]
         [ServiceFilter(typeof(IdempotencyFilterAttribute))]
-        [EnableRateLimiting(RateLimitingExtensions.IssueDegreePolicy)]
+        [EnableRateLimiting(RateLimitPolicies.Degrees.Issue)]
         [ProducesResponseType(typeof(IssueDegreeResponse), StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -65,7 +65,7 @@ namespace ChainDegree.API.Controllers
 
         [HttpGet("batches/{batchId:guid}")]
         [Authorize(Policy = Roles.Registrar)]
-        [EnableRateLimiting(RateLimitingExtensions.GetBatchStatusPolicy)]
+        [EnableRateLimiting(RateLimitPolicies.Degrees.BatchStatus)]
         public async Task<IActionResult> GetBatchStatus(
             Guid batchId,
             CancellationToken ct)
@@ -83,7 +83,7 @@ namespace ChainDegree.API.Controllers
 
         [HttpPost("{id:guid}/retry")]
         [Authorize(Policy = Roles.Registrar)]
-        [EnableRateLimiting(RateLimitingExtensions.RetryDegreePolicy)]
+        [EnableRateLimiting(RateLimitPolicies.Degrees.Retry)]
         public async Task<IActionResult> RetryDegreeConfirmation(
             Guid id,
             CancellationToken ct)
@@ -101,7 +101,7 @@ namespace ChainDegree.API.Controllers
 
         [HttpPost("{id:guid}/revoke")]
         [Authorize(Policy = Roles.Registrar)]
-        [EnableRateLimiting(RateLimitingExtensions.RevokeDegreePolicy)]
+        [EnableRateLimiting(RateLimitPolicies.Degrees.Revoke)]
         [ProducesResponseType(typeof(RevokeDegreeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(RevokeDegreeResponse), StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -131,7 +131,7 @@ namespace ChainDegree.API.Controllers
 
         [HttpPut("{id:guid}")]
         [Authorize(Policy = Roles.Registrar)]
-        [EnableRateLimiting(RateLimitingExtensions.UpdateDegreePolicy)]
+        [EnableRateLimiting(RateLimitPolicies.Degrees.Update)]
         [ProducesResponseType(typeof(UpdateDegreeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(UpdateDegreeResponse), StatusCodes.Status202Accepted)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -162,7 +162,7 @@ namespace ChainDegree.API.Controllers
         [HttpPost("verify")]
         [AllowAnonymous]
         [RequestSizeLimit(65_536)]
-        [EnableRateLimiting(RateLimitingExtensions.VerifyDegreePolicy)]
+        [EnableRateLimiting(RateLimitPolicies.Degrees.Verify)]
         [ProducesResponseType(typeof(VerifyDegreeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(VerifyDegreeErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(VerifyDegreeErrorResponse), StatusCodes.Status422UnprocessableEntity)]
