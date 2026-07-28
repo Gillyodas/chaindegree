@@ -122,6 +122,42 @@ Never continue startup if blockchain configuration is invalid.
 
 ---
 
+# Startup Composition
+
+Keep Program.cs as the composition root.
+
+Program.cs should orchestrate the application,
+not contain implementation details.
+
+Group related registrations into dedicated extension methods.
+
+Good
+
+builder.Services.AddApplication();
+
+builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddAuthenticationModule(builder.Configuration);
+
+builder.Services.AddHealthCheckModule();
+
+builder.Services.AddOpenApiModule();
+
+Avoid
+
+Hundreds of lines of service registrations directly inside Program.cs.
+
+The goal is modular startup,
+not plugin architecture.
+
+Each module should have a single responsibility
+and be independently maintainable.
+
+Program.cs should read like a high-level overview
+of how the application is composed.
+
+---
+
 # Dependency Injection
 
 Always inject abstractions.
