@@ -1,4 +1,6 @@
 using System;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
@@ -38,6 +40,8 @@ namespace ChainDegree.API.Extensions
 
         public static class Reports
         {
+            public const string Submit = "reports:submit";
+            public const string Review = "reports:review";
             public const string Export = "reports:export";
         }
     }
@@ -56,14 +60,19 @@ namespace ChainDegree.API.Extensions
                 ConfigureDegreePolicies(options);
 
                 // ========================================================
-                // DOMAIN MODULE 2: STUDENTS (Sinh viên) — Extensible
+                // DOMAIN MODULE 2: STUDENTS (Sinh viên)
                 // ========================================================
                 ConfigureStudentPolicies(options);
 
                 // ========================================================
-                // DOMAIN MODULE 3: RECRUITERS & JOBS — Extensible
+                // DOMAIN MODULE 3: RECRUITERS & JOBS
                 // ========================================================
                 ConfigureRecruiterAndJobPolicies(options);
+
+                // ========================================================
+                // DOMAIN MODULE 4: REPORTS & COMPLAINTS
+                // ========================================================
+                ConfigureReportPolicies(options);
             });
 
             return services;
@@ -71,7 +80,6 @@ namespace ChainDegree.API.Extensions
 
         private static void ConfigureDegreePolicies(RateLimiterOptions options)
         {
-            // Public verification endpoint rate limit (strict: 30 req/min)
             options.AddFixedWindowLimiter(RateLimitPolicies.Degrees.Verify, config =>
             {
                 config.PermitLimit = 30;
@@ -79,7 +87,6 @@ namespace ChainDegree.API.Extensions
                 config.QueueLimit = 0;
             });
 
-            // Issue degrees batch endpoint rate limit (60 req/min)
             options.AddFixedWindowLimiter(RateLimitPolicies.Degrees.Issue, config =>
             {
                 config.PermitLimit = 60;
@@ -87,7 +94,6 @@ namespace ChainDegree.API.Extensions
                 config.QueueLimit = 0;
             });
 
-            // Update degree endpoint rate limit (30 req/min)
             options.AddFixedWindowLimiter(RateLimitPolicies.Degrees.Update, config =>
             {
                 config.PermitLimit = 30;
@@ -95,7 +101,6 @@ namespace ChainDegree.API.Extensions
                 config.QueueLimit = 0;
             });
 
-            // Revoke degree endpoint rate limit (30 req/min)
             options.AddFixedWindowLimiter(RateLimitPolicies.Degrees.Revoke, config =>
             {
                 config.PermitLimit = 30;
@@ -103,7 +108,6 @@ namespace ChainDegree.API.Extensions
                 config.QueueLimit = 0;
             });
 
-            // Retry confirmation endpoint rate limit (30 req/min)
             options.AddFixedWindowLimiter(RateLimitPolicies.Degrees.Retry, config =>
             {
                 config.PermitLimit = 30;
@@ -111,7 +115,6 @@ namespace ChainDegree.API.Extensions
                 config.QueueLimit = 0;
             });
 
-            // Get batch status polling endpoint rate limit (120 req/min)
             options.AddFixedWindowLimiter(RateLimitPolicies.Degrees.BatchStatus, config =>
             {
                 config.PermitLimit = 120;
@@ -154,6 +157,32 @@ namespace ChainDegree.API.Extensions
             });
 
             options.AddFixedWindowLimiter(RateLimitPolicies.Jobs.Write, config =>
+            {
+                config.PermitLimit = 30;
+                config.Window = TimeSpan.FromMinutes(1);
+                config.QueueLimit = 0;
+            });
+        }
+
+        private static void ConfigureReportPolicies(RateLimiterOptions options)
+        {
+            // Report submission rate limiter partitioned by IP + UserID
+            options.AddPolicy(RateLimitPolicies.Reports.Submit, httpContext =>
+            {
+                var userId = httpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous";
+                var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown_ip";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: $"{ip}:{userId}",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    });
+            });
+
+            // Report review endpoint (30 req/min)
+            options.AddFixedWindowLimiter(RateLimitPolicies.Reports.Review, config =>
             {
                 config.PermitLimit = 30;
                 config.Window = TimeSpan.FromMinutes(1);
