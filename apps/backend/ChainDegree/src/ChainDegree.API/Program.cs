@@ -1,3 +1,4 @@
+using ChainDegree.API.Extensions;
 using ChainDegree.API.Filters;
 using ChainDegree.Core.Application;
 using ChainDegree.Core.Application.Abstractions.Auth;
@@ -68,15 +69,7 @@ namespace ChainDegree.API
             });
 
             // Register rate limiting for public verify endpoint
-            builder.Services.AddRateLimiter(options =>
-            {
-                options.AddFixedWindowLimiter("verify-degree", config =>
-                {
-                    config.PermitLimit = 30;
-                    config.Window = System.TimeSpan.FromMinutes(1);
-                    config.QueueLimit = 0;
-                });
-            });
+            builder.Services.AddCustomRateLimiting();
 
             builder.Services.AddOpenApi();
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ChainDegree.API.Contracts.Degrees;
+using ChainDegree.API.Extensions;
 using ChainDegree.API.Filters;
 using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Application.Degrees.Commands.IssueDegree;
@@ -155,7 +156,7 @@ namespace ChainDegree.API.Controllers
         [HttpPost("verify")]
         [AllowAnonymous]
         [RequestSizeLimit(65_536)]
-        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("verify-degree")]
+        [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(RateLimitingExtensions.VerifyDegreePolicy)]
         [ProducesResponseType(typeof(VerifyDegreeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(VerifyDegreeErrorResponse), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(VerifyDegreeErrorResponse), StatusCodes.Status422UnprocessableEntity)]
