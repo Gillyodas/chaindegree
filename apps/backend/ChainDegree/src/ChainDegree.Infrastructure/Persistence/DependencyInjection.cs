@@ -8,6 +8,7 @@ using ChainDegree.Core.Infrastructure.Services;
 using ChainDegree.Core.Infrastructure.Persistence.Locking;
 using ChainDegree.Core.Infrastructure.Persistence.Repositories;
 using ChainDegree.Core.Application.Abstractions.Repositories;
+using ChainDegree.Core.Application.Abstractions.Services;
 using ChainDegree.Core.Domain.Degrees.Interfaces;
 using ChainDegree.Core.Application.Abstractions.Crypto;
 using ChainDegree.Core.Application.Abstractions.Blockchain;
@@ -40,6 +41,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddSingleton<IMerkleTreeService, MerkleTreeService>();
             services.AddScoped<IPendingDegreeLockStrategy, SqlServerPendingDegreeLockStrategy>();
             services.AddScoped<IDegreeRepository, DegreeRepository>();
+            services.AddScoped<IReportRepository, ReportRepository>();
+            services.AddScoped<IEvidenceStorageService, LocalFileSystemEvidenceStorageService>();
             services.AddScoped<Core.Application.Abstractions.Queries.IBatchQueryService, BatchTrackingService>();
             services.AddScoped<IBlockchainService, NethereumBlockchainService>();
             services.AddSingleton<Monitoring.WorkerMetrics>();

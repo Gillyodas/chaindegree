@@ -25,8 +25,12 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
                    .HasMaxLength(50)
                    .IsRequired();
 
-            builder.Property(x => x.Description).HasColumnType("nvarchar(max)");
-            builder.Property(x => x.EvidenceFileUrl).HasMaxLength(500);
+            builder.Property(x => x.Description)
+                   .HasMaxLength(2000)
+                   .IsRequired();
+
+            builder.Property(x => x.EvidenceFileName)
+                   .HasMaxLength(255);
 
             builder.Property(x => x.Status)
                    .HasConversion<string>()
@@ -34,6 +38,11 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
                    .IsRequired();
 
             builder.Property(x => x.ReviewedAt);
+
+            builder.Property(x => x.RejectionReason)
+                   .HasMaxLength(1000);
+
+            builder.HasIndex(x => new { x.ReporterId, x.TargetDegreeId, x.Status });
 
             builder.HasOne<Degree>()
                    .WithMany()
