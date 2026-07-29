@@ -18,6 +18,7 @@ using ChainDegree.Core.Domain.SharedKernel;
 using ChainDegree.Core.Application.Abstractions.Auth;
 using ChainDegree.Core.Infrastructure.Persistence.QueryFilters;
 using ChainDegree.Core.Infrastructure.Persistence.Entities;
+using ChainDegree.Core.Domain.Reputation;
 using DomainApplication = ChainDegree.Core.Domain.Applications.Application;
 
 namespace ChainDegree.Core.Infrastructure.Persistence
@@ -67,6 +68,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence
         public DbSet<DegreeUpdateRequest> DegreeUpdateRequests => Set<DegreeUpdateRequest>();
         public DbSet<BatchRecord> BatchRecords => Set<BatchRecord>();
         public DbSet<BatchDegreeRecord> BatchDegreeRecords => Set<BatchDegreeRecord>();
+        public DbSet<ReputationScore> ReputationScores => Set<ReputationScore>();
+        public DbSet<ReputationHistory> ReputationHistories => Set<ReputationHistory>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
