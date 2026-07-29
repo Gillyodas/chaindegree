@@ -42,11 +42,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddScoped<IPendingDegreeLockStrategy, SqlServerPendingDegreeLockStrategy>();
             services.AddScoped<IDegreeRepository, DegreeRepository>();
             services.AddScoped<IReportRepository, ReportRepository>();
-            services.AddScoped<IReputationRepository, ReputationRepository>();
             services.AddScoped<IEvidenceStorageService, LocalFileSystemEvidenceStorageService>();
             services.AddScoped<Core.Application.Abstractions.Queries.IBatchQueryService, BatchTrackingService>();
             services.AddScoped<IBlockchainService, NethereumBlockchainService>();
-            services.AddScoped<IReputationBlockchainService, NethereumReputationBlockchainService>();
             services.AddSingleton<Monitoring.WorkerMetrics>();
 
             // Register configurations

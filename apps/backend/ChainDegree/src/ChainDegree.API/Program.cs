@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Prometheus;
 using Scalar.AspNetCore;
 
+using ChainDegree.Reputation;
+
 using System.Threading.Tasks;
 
 namespace ChainDegree.API
@@ -28,6 +30,7 @@ namespace ChainDegree.API
             // Register application services
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(builder.Configuration);
+            builder.Services.AddReputationModule(builder.Configuration);
 
             // Register CORS for frontend integration
             builder.Services.AddCors(options =>

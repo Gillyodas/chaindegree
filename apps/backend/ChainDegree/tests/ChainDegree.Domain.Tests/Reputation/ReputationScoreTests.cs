@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using ChainDegree.Core.Domain.Reputation;
-using ChainDegree.Core.Domain.Reputation.Enums;
-using ChainDegree.Core.Domain.Reputation.Events;
+using ChainDegree.Reputation.Domain;
+using ChainDegree.Reputation.Domain.Enums;
+using ChainDegree.Reputation.Domain.Events;
 using Xunit;
 
 namespace ChainDegree.Domain.Tests.Reputation;

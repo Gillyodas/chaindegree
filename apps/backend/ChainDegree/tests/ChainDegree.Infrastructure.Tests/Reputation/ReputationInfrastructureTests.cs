@@ -1,10 +1,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using ChainDegree.Core.Application.Abstractions.Repositories;
-using ChainDegree.Core.Domain.Reputation;
-using ChainDegree.Core.Domain.Reputation.Enums;
-using ChainDegree.Core.Infrastructure.Blockchain;
+using ChainDegree.Reputation.Application.Abstractions;
+using ChainDegree.Reputation.Domain;
+using ChainDegree.Reputation.Domain.Enums;
+using ChainDegree.Reputation.Infrastructure.Blockchain;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;

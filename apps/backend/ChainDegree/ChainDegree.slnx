@@ -4,6 +4,7 @@
     <Project Path="src/ChainDegree.Application/ChainDegree.Core.Application.csproj" Id="5d2fdaf9-f560-4af7-8343-b26c9ff03745" />
     <Project Path="src/ChainDegree.Domain/ChainDegree.Core.Domain.csproj" Id="728ab21d-d839-4164-aac5-297132df11d0" />
     <Project Path="src/ChainDegree.Infrastructure/ChainDegree.Core.Infrastructure.csproj" Id="7da8c0aa-736c-4b32-bd6a-fb5a57eff4f4" />
+    <Project Path="src/ChainDegree.Reputation/ChainDegree.Reputation.csproj" Id="8e9a21b3-4c12-4211-9a72-111122223333" />
     <Project Path="src/ChainDegree.SharedKernel/ChainDegree.SharedKernel.csproj" Id="240fc58e-85dd-46b9-b007-27acb63aad81" />
   </Folder>
   <Folder Name="/tests/">

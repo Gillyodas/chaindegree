@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ChainDegree.Application\ChainDegree.Core.Application.csproj" />
     <ProjectReference Include="..\ChainDegree.Infrastructure\ChainDegree.Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\ChainDegree.Reputation\ChainDegree.Reputation.csproj" />
     <ProjectReference Include="..\ChainDegree.SharedKernel\ChainDegree.SharedKernel.csproj" />
   </ItemGroup>
 

@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\ChainDegree.Infrastructure\ChainDegree.Core.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\ChainDegree.Application\ChainDegree.Core.Application.csproj" />
     <ProjectReference Include="..\..\src\ChainDegree.Domain\ChainDegree.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ChainDegree.Reputation\ChainDegree.Reputation.csproj" />
     <ProjectReference Include="..\..\src\ChainDegree.SharedKernel\ChainDegree.SharedKernel.csproj" />
   </ItemGroup>
 

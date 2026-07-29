@@ -1,12 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using ChainDegree.Core.Application.Abstractions.Repositories;
-using ChainDegree.Core.Application.Reputation.Commands.ApplyReputationPenalty;
-using ChainDegree.Core.Application.Reputation.Queries.GetInstitutionReputation;
-using ChainDegree.Core.Application.Reputation.Queries.GetReputationHistory;
-using ChainDegree.Core.Domain.Reputation;
-using ChainDegree.Core.Domain.Reputation.Enums;
+using ChainDegree.Reputation.Application.Abstractions;
+using ChainDegree.Reputation.Application.Commands.ApplyReputationPenalty;
+using ChainDegree.Reputation.Application.Queries.GetInstitutionReputation;
+using ChainDegree.Reputation.Application.Queries.GetReputationHistory;
+using ChainDegree.Reputation.Domain;
+using ChainDegree.Reputation.Domain.Enums;
 using Moq;
 using Xunit;
 
