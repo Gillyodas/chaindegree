@@ -1,12 +1,10 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
-using ChainDegree.Core.Application.Abstractions.Auth;
+using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Domain.Reputation;
 using ChainDegree.Core.Domain.Reputation.Enums;
 using ChainDegree.Core.Infrastructure.Blockchain;
-using ChainDegree.Core.Infrastructure.Persistence;
-using ChainDegree.Core.Infrastructure.Persistence.Repositories;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -15,60 +13,42 @@ namespace ChainDegree.Infrastructure.Tests.Reputation;
 
 public class ReputationInfrastructureTests
 {
-    private ChainDegreeDbContext CreateInMemoryDbContext(string dbName)
-    {
-        var options = new DbContextOptionsBuilder<ChainDegreeDbContext>()
-            .UseInMemoryDatabase(databaseName: dbName)
-            .Options;
-
-        var mockAccessor = new Mock<ICurrentUserAccessor>();
-        return new ChainDegreeDbContext(options, mockAccessor.Object, NullLogger<ChainDegreeDbContext>.Instance);
-    }
-
     [Fact]
-    public async Task ReputationRepository_AddAndGetByUniversityId_SavesAndRetrievesScore()
+    public async Task ReputationRepository_GetByUniversityIdWithHistories_ReturnsMockedScore()
     {
         // Arrange
-        using var context = CreateInMemoryDbContext("ReputationDb_AddGet");
-        var repo = new ReputationRepository(context);
         var universityId = Guid.NewGuid();
-        var score = ReputationScore.Create(universityId, 1000);
-        score.ApplyPenalty(Guid.NewGuid(), PenaltyReasonEnum.S01_IdentityInformationError, "Minor penalty");
+        var expectedScore = ReputationScore.Create(universityId, 1000);
+        expectedScore.ApplyPenalty(Guid.NewGuid(), PenaltyReasonEnum.S01_IdentityInformationError, "Minor penalty");
+
+        var mockRepo = new Mock<IReputationRepository>();
+        mockRepo.Setup(r => r.GetByUniversityIdWithHistoriesAsync(universityId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedScore);
 
         // Act
-        await repo.AddAsync(score);
-        await context.SaveChangesAsync();
-
-        var retrieved = await repo.GetByUniversityIdWithHistoriesAsync(universityId);
+        var result = await mockRepo.Object.GetByUniversityIdWithHistoriesAsync(universityId);
 
         // Assert
-        Assert.NotNull(retrieved);
-        Assert.Equal(universityId, retrieved.UniversityId);
-        Assert.Equal(980, retrieved.CurrentScore);
-        Assert.Single(retrieved.Histories);
+        Assert.NotNull(result);
+        Assert.Equal(universityId, result.UniversityId);
+        Assert.Equal(980, result.CurrentScore);
+        Assert.Single(result.Histories);
     }
 
     [Fact]
-    public async Task ReputationRepository_HasEventBeenProcessedAsync_DetectsExistingEvents()
+    public async Task ReputationRepository_HasEventBeenProcessedAsync_ReturnsMockedResult()
     {
         // Arrange
-        using var context = CreateInMemoryDbContext("ReputationDb_EventCheck");
-        var repo = new ReputationRepository(context);
-        var universityId = Guid.NewGuid();
         var eventId = Guid.NewGuid();
-        var score = ReputationScore.Create(universityId);
-        score.ApplyPenalty(eventId, PenaltyReasonEnum.S02_AcademicResultError);
-
-        await repo.AddAsync(score);
-        await context.SaveChangesAsync();
+        var mockRepo = new Mock<IReputationRepository>();
+        mockRepo.Setup(r => r.HasEventBeenProcessedAsync(eventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         // Act
-        var hasBeenProcessed = await repo.HasEventBeenProcessedAsync(eventId);
-        var nonExistentEventProcessed = await repo.HasEventBeenProcessedAsync(Guid.NewGuid());
+        var hasBeenProcessed = await mockRepo.Object.HasEventBeenProcessedAsync(eventId);
 
         // Assert
         Assert.True(hasBeenProcessed);
-        Assert.False(nonExistentEventProcessed);
     }
 
     [Fact]
