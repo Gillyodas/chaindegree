@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using ChainDegree.SharedKernel.Common.Error;
@@ -21,5 +21,8 @@ namespace ChainDegree.SharedKernel.DomainErrors.Jobs
 
         public static readonly Error EndDateInPast =
             Error.Validation("Job.EndDateInPast", "The application end date must be in the future.");
+
+        public static readonly Error DescriptionTooLong =
+            Error.Validation("Job.DescriptionTooLong", "Job description cannot exceed 4000 characters.");
     }
 }
