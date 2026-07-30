@@ -23,6 +23,7 @@ namespace ChainDegree.Core.Application
             services.AddScoped<Abstractions.Services.IDegreeIssuanceService, Services.DegreeIssuanceService>();
             services.AddScoped<Abstractions.Policies.IDegreeDuplicatePolicy, Policies.DegreeDuplicatePolicy>();
             services.AddScoped<Abstractions.Crypto.IDegreeHashService, Services.DegreeHashService>();
+            services.AddScoped<Recruitment.Services.IJobRankingService, Recruitment.Services.JobRankingService>();
 
             return services;
         }
