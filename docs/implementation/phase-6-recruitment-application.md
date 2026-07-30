@@ -26,7 +26,7 @@ Phase 6 delivers the **Recruitment and Application** feature (US-6, US-7 / UC-6,
 | **Bounded Context & Aggregates** | ✅ Recruitment reads degree data from Core and reputation data via abstraction. `Application` is its own Aggregate Root since it has an independent lifecycle (`Submitted -> Reviewed -> Accepted -> Rejected`) separate from `Job`. |
 | **Student Ownership (Security)** | ✅ `ApplyForJobCommand` MUST verify `Degree.StudentId == CurrentUserId`. This prevents an IDOR vulnerability where User A uses User B's degree ID. |
 | **Duplicate Applications** | ✅ Enforce an invariant (and DB Unique Constraint) on `StudentId` + `JobId`. A student can only apply once per job. |
-| **Job Lifecycle & Deadline** | ✅ `Job` has `Status` (`Open`, `Closed`) and `ExpiresAt`. Applications are rejected if `Now > ExpiresAt` or `Status == Closed`. (Checked during Application, no scheduler needed). |
+| **Job Lifecycle & Deadline** | ✅ `Job` has `Status` (`Open`, `Closed`) and `ExpiresAt`. Applications are rejected if current time (`TimeProvider.GetUtcNow()`) > `ExpiresAt` or `Status == Closed`. Uses .NET `TimeProvider` abstraction for testability instead of `DateTime.UtcNow`. (Checked during Application, no scheduler needed). |
 | **Data Validation Rules** | ✅ `SalaryMin <= SalaryMax`. Both must be `> 0` to prevent `ln(0)` error in ranking. `Description` is limited to max 4000 chars. |
 | **Reputation Fallback** | ✅ If the Reputation module is offline, `IReputationReadService` defaults to `500`. |
 | **Application Matching Logic** | ✅ Server validates `Degree` against `DegreeFilter`. Comparisons are hierarchical (e.g., `Excellent >= Good`), not strict equality. |
@@ -51,10 +51,10 @@ Phase 6 delivers the **Recruitment and Application** feature (US-6, US-7 / UC-6,
 ### Work Package 6.2: Application Layer (Use Cases & Ranking)
 - **Tasks**:
   - Implement `PostJobCommandHandler`.
-  - Implement `ApplyForJobCommandHandler`. Handles ownership check (IDOR), deadline check, duplicate check, degree matching, and `forceSubmit` flow.
+  - Implement `ApplyForJobCommandHandler`. Handles ownership check (IDOR), deadline check, duplicate check, degree matching, and `forceSubmit` flow. Uses injected `TimeProvider`.
   - Implement `RankingOptions` (appsettings).
-  - Implement `JobRankingService` containing the math formula using options.
-- **Done Criteria**: Handlers cover all edge cases (duplicate apply, IDOR, deadline). Ranking algorithm uses configured weights.
+  - Implement `JobRankingService` containing the math formula using options and `TimeProvider` to calculate $\Delta t$.
+- **Done Criteria**: Handlers cover all edge cases (duplicate apply, IDOR, deadline). Ranking algorithm uses configured weights. `TimeProvider` is correctly injected for all time-based logic.
 
 ### Work Package 6.3: Infrastructure & Data Access
 - **Tasks**:
