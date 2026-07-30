@@ -42,6 +42,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddScoped<IPendingDegreeLockStrategy, SqlServerPendingDegreeLockStrategy>();
             services.AddScoped<IDegreeRepository, DegreeRepository>();
             services.AddScoped<IReportRepository, ReportRepository>();
+            services.AddScoped<IJobRepository, JobRepository>();
+            services.AddScoped<IApplicationRepository, ApplicationRepository>();
+            services.AddScoped<IReputationReadService, ReputationReadService>();
             services.AddScoped<IEvidenceStorageService, LocalFileSystemEvidenceStorageService>();
             services.AddScoped<Core.Application.Abstractions.Queries.IBatchQueryService, BatchTrackingService>();
             services.AddScoped<IBlockchainService, NethereumBlockchainService>();
