@@ -9,7 +9,7 @@ Phase 6 delivers the **Recruitment and Application** feature (US-6, US-7 / UC-6,
 | Component | Target Layer | Notes |
 |---|---|---|
 | `Job` | Domain | Aggregate Root for job postings. Tracks `RecruiterId`, `Status` (Open/Closed), `ExpiresAt`, and salary bounds. |
-| `Application` | Domain | **Aggregate Root** (Independent lifecycle). Tracks `StudentId`, `JobId`, `ProcessStatus`, `RankStatus`. Unique `StudentId` + `JobId` constraint. |
+| `Application` | Domain | **Aggregate Root** (Independent lifecycle). Tracks `StudentId`, `JobId`, `ProcessStatus`, `RankStatus`. Unique `StudentId` + `JobId` constraint. Primary degree tracked via `ApplicationAttachedDegree.IsPrimary` flag. |
 | `DegreeFilter` | Domain | Value Object representing minimum matching criteria for a `Job`. |
 | Use Cases & Handlers | Application | `PostJobCommand`, `ApplyForJobCommand`. Application logic verifies `Degree.StudentId == CurrentUserId` (IDOR prevention). |
 | Ranking Algorithm | Application | Calculates `JobScore` using `IOptions<RankingOptions>` to avoid magic numbers. Avoids N+1 queries by batch-loading Reputations. |
@@ -44,7 +44,7 @@ Phase 6 delivers the **Recruitment and Application** feature (US-6, US-7 / UC-6,
 - **Tasks**:
   - Define `Job` Aggregate Root (`Id`, `RecruiterId`, `Title`, `SalaryMin` > 0, `SalaryMax` >= `SalaryMin`, `Description` (max 4000), `Status` (Open/Closed), `ExpiresAt`, `CreatedAt`).
   - Define `DegreeFilter` value object (`DegreeType`, `RequiredMajor`, `MinimumClassification`).
-  - Define `Application` Aggregate Root (`Id`, `JobId`, `DegreeId`, `StudentId`, `ProcessStatus` (Submitted, Reviewed, Accepted, Rejected), `RankStatus`).
+  - Define `Application` Aggregate Root (`Id`, `JobId`, `StudentId`, `ProcessStatus` (Submitted, Reviewed, Accepted, Rejected), `RankStatus`). Attached degrees track `IsPrimary`.
   - Implement Domain validation rules for degree matching (hierarchical).
 - **Done Criteria**: Domain model encapsulates all rules (salary checks, description length).
 
