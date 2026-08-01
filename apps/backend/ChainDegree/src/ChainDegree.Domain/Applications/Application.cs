@@ -12,7 +12,6 @@ namespace ChainDegree.Core.Domain.Applications
     {
         public Guid JobId { get; private set; }
         public Guid StudentId { get; private set; }
-        public Guid DegreeId { get; private set; }
         public ApplicationRankStatusEnum RankStatus { get; private set; }
         public ApplicationProcessStatusEnum ProcessStatus { get; private set; }
         public bool IsForceSubmitted { get; private set; }
@@ -34,12 +33,11 @@ namespace ChainDegree.Core.Domain.Applications
             Id = id;
             JobId = jobId;
             StudentId = studentId;
-            DegreeId = degreeId;
             RankStatus = rankStatus;
             ProcessStatus = ApplicationProcessStatusEnum.Submitted;
             IsForceSubmitted = isForceSubmitted;
             CreatedAt = utcNow;
-            AttachDegree(degreeId);
+            AttachDegree(degreeId, isPrimary: true);
         }
 
         public static Result<Application> Create(
@@ -66,14 +64,18 @@ namespace ChainDegree.Core.Domain.Applications
             return Result<Application>.Success(application);
         }
 
-        public void AttachDegree(Guid degreeId)
+        public void AttachDegree(Guid degreeId, bool isPrimary = false)
         {
             if (degreeId == Guid.Empty)
                 throw new ArgumentException("DegreeId cannot be empty.");
 
             if (!_attachedDegrees.Exists(ad => ad.DegreeId == degreeId))
             {
-                _attachedDegrees.Add(new ApplicationAttachedDegree(Id, degreeId));
+                if (isPrimary && _attachedDegrees.Exists(ad => ad.IsPrimary))
+                {
+                    throw new InvalidOperationException("An application can only have one primary degree.");
+                }
+                _attachedDegrees.Add(new ApplicationAttachedDegree(Id, degreeId, isPrimary));
                 UpdatedAt = DateTime.UtcNow;
             }
         }

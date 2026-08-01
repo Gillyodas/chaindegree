@@ -121,7 +121,7 @@ namespace ChainDegree.Core.Application.Recruitment.Commands.ApplyForJob
                 "Applications",
                 application.Id,
                 null,
-                System.Text.Json.JsonSerializer.Serialize(new { application.Id, application.JobId, studentId, application.DegreeId, application.RankStatus }),
+                System.Text.Json.JsonSerializer.Serialize(new { application.Id, application.JobId, studentId, request.DegreeId, application.RankStatus }),
                 ct
             );
 
