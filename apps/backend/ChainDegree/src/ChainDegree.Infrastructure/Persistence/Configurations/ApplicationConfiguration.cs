@@ -24,7 +24,6 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
                    .HasMaxLength(50)
                    .IsRequired();
 
-            builder.Property(x => x.DegreeId).IsRequired();
             builder.Property(x => x.IsForceSubmitted).IsRequired();
 
             builder.HasIndex(x => new { x.StudentId, x.JobId }).IsUnique();

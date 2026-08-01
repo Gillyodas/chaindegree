@@ -11,6 +11,7 @@ public class ApplicationAttachedDegreeConfiguration : IEntityTypeConfiguration<A
     {
         builder.ToTable("APPLICATION_ATTACHED_DEGREES");
         builder.HasKey(x => new { x.ApplicationId, x.DegreeId });
+        builder.Property(x => x.IsPrimary).IsRequired();
 
         builder.HasOne<Degree>()
                .WithMany()

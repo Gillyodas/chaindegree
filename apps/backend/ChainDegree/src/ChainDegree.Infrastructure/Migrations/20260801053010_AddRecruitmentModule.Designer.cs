@@ -4,6 +4,7 @@ using ChainDegree.Core.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ChainDegree.Core.Infrastructure.Migrations
 {
     [DbContext(typeof(ChainDegreeDbContext))]
-    partial class ChainDegreeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260801053010_AddRecruitmentModule")]
+    partial class AddRecruitmentModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -32,6 +35,9 @@ namespace ChainDegree.Core.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DegreeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -81,9 +87,6 @@ namespace ChainDegree.Core.Infrastructure.Migrations
 
                     b.Property<Guid>("DegreeId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("bit");
 
                     b.HasKey("ApplicationId", "DegreeId");
 
