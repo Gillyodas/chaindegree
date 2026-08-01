@@ -4,6 +4,7 @@ using ChainDegree.Core.Domain.Recruiters.Entities;
 using ChainDegree.Core.Domain.Recruiters.Enums;
 using ChainDegree.Core.Domain.Recruiters.Events;
 using ChainDegree.Core.Domain.SharedKernel;
+using ChainDegree.SharedKernel.Result;
 
 namespace ChainDegree.Core.Domain.Recruiters
 {
@@ -18,9 +19,12 @@ namespace ChainDegree.Core.Domain.Recruiters
         private readonly List<RecruiterAgent> _recruiterAgents = new();
         public IReadOnlyCollection<RecruiterAgent> RecruiterAgents => _recruiterAgents.AsReadOnly();
 
-        public void VerifyBusiness()
+        public Result VerifyBusiness()
         {
-            throw new NotImplementedException();
+            this.IsVerified = true;
+            this.CompanyStatus = CompanyStatusEnum.Active;
+            this.UpdatedAt = DateTime.UtcNow;
+            return ChainDegree.SharedKernel.Result.Result.Success();
         }
 
         public void Deactivate()

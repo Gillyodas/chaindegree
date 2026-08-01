@@ -49,7 +49,7 @@ namespace ChainDegree.Application.Tests.Reports
         {
             // Arrange
             var adminId = Guid.NewGuid();
-            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Fraudulent_Data, "Fake degree", "evidence.pdf");
+            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Fraudulent_Data, "Fake degree", "evidence.pdf").Value;
 
             _mockUserAccessor.Setup(u => u.IsAuthenticated).Returns(true);
             _mockUserAccessor.Setup(u => u.UserId).Returns(adminId);

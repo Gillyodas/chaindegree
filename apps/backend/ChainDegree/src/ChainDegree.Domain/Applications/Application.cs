@@ -64,20 +64,22 @@ namespace ChainDegree.Core.Domain.Applications
             return Result<Application>.Success(application);
         }
 
-        public void AttachDegree(Guid degreeId, bool isPrimary = false)
+        public Result AttachDegree(Guid degreeId, bool isPrimary = false)
         {
             if (degreeId == Guid.Empty)
-                throw new ArgumentException("DegreeId cannot be empty.");
+                return Result.Failure(ApplicationErrors.EmptyIdentifiers);
 
             if (!_attachedDegrees.Exists(ad => ad.DegreeId == degreeId))
             {
                 if (isPrimary && _attachedDegrees.Exists(ad => ad.IsPrimary))
                 {
-                    throw new InvalidOperationException("An application can only have one primary degree.");
+                    return Result.Failure(ApplicationErrors.MultiplePrimaryDegrees);
                 }
                 _attachedDegrees.Add(new ApplicationAttachedDegree(Id, degreeId, isPrimary));
                 UpdatedAt = DateTime.UtcNow;
             }
+
+            return Result.Success();
         }
 
         public void SubmitForcefully()

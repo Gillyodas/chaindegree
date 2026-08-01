@@ -21,5 +21,8 @@ namespace ChainDegree.SharedKernel.DomainErrors.Applications
 
         public static readonly Error DegreeOwnershipMismatch =
             Error.Validation("Application.DegreeOwnershipMismatch", "The specified degree does not belong to the current student.");
+
+        public static readonly Error MultiplePrimaryDegrees =
+            Error.Validation("Application.MultiplePrimaryDegrees", "An application can only have one primary degree.");
     }
 }

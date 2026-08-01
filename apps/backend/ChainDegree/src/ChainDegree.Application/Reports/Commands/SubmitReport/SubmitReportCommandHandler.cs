@@ -94,13 +94,20 @@ namespace ChainDegree.Core.Application.Reports.Commands.SubmitReport
 
             try
             {
-                var report = Report.Create(
+                var reportResult = Report.Create(
                     request.TargetDegreeId,
                     currentUserId,
                     reporterRole,
                     request.ReportType,
                     request.Description,
                     savedFileName);
+
+                if (reportResult.IsFailure)
+                {
+                    return Result<SubmitReportResponse>.Failure(reportResult.Error);
+                }
+
+                var report = reportResult.Value;
 
                 await _reportRepository.AddAsync(report, ct);
 

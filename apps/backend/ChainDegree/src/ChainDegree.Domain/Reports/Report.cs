@@ -22,7 +22,7 @@ namespace ChainDegree.Core.Domain.Reports
 
         private Report() { }
 
-        public static Report Create(
+        public static Result<Report> Create(
             Guid targetDegreeId,
             Guid reporterId,
             UserRoleEnum reporterRole,
@@ -31,11 +31,11 @@ namespace ChainDegree.Core.Domain.Reports
             string? evidenceFileName)
         {
             if (targetDegreeId == Guid.Empty)
-                throw new ArgumentException("Target degree id cannot be empty.", nameof(targetDegreeId));
+                return Result<Report>.Failure(new Error("Report.EmptyTargetDegreeId", "Target degree id cannot be empty.", ErrorType.Validation));
             if (reporterId == Guid.Empty)
-                throw new ArgumentException("Reporter id cannot be empty.", nameof(reporterId));
+                return Result<Report>.Failure(new Error("Report.EmptyReporterId", "Reporter id cannot be empty.", ErrorType.Validation));
             if (string.IsNullOrWhiteSpace(description))
-                throw new ArgumentException("Description cannot be empty.", nameof(description));
+                return Result<Report>.Failure(new Error("Report.EmptyDescription", "Description cannot be empty.", ErrorType.Validation));
 
             var report = new Report
             {
@@ -56,7 +56,7 @@ namespace ChainDegree.Core.Domain.Reports
                 report.ReporterRole,
                 report.ReportType));
 
-            return report;
+            return Result<Report>.Success(report);
         }
 
         public Result Approve(Guid? universityId = null)

@@ -50,7 +50,7 @@ namespace ChainDegree.Application.Tests.Reports
             // Arrange
             var adminId = Guid.NewGuid();
             var fileName = "evidence_to_delete.pdf";
-            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Fraudulent_Data, "Fake claim", fileName);
+            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Fraudulent_Data, "Fake claim", fileName).Value;
 
             _mockUserAccessor.Setup(u => u.IsAuthenticated).Returns(true);
             _mockUserAccessor.Setup(u => u.UserId).Returns(adminId);

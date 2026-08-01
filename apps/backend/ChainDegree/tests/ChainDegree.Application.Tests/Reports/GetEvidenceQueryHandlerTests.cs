@@ -39,7 +39,7 @@ namespace ChainDegree.Application.Tests.Reports
         {
             // Arrange
             var studentId = Guid.NewGuid();
-            var report = Report.Create(Guid.NewGuid(), studentId, UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Typo", "file123.pdf");
+            var report = Report.Create(Guid.NewGuid(), studentId, UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Typo", "file123.pdf").Value;
 
             _mockUserAccessor.Setup(u => u.IsAuthenticated).Returns(true);
             _mockUserAccessor.Setup(u => u.UserId).Returns(studentId);
@@ -66,7 +66,7 @@ namespace ChainDegree.Application.Tests.Reports
             // Arrange
             var studentId = Guid.NewGuid();
             var otherStudentId = Guid.NewGuid();
-            var report = Report.Create(Guid.NewGuid(), otherStudentId, UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Typo", "file123.pdf");
+            var report = Report.Create(Guid.NewGuid(), otherStudentId, UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Typo", "file123.pdf").Value;
 
             _mockUserAccessor.Setup(u => u.IsAuthenticated).Returns(true);
             _mockUserAccessor.Setup(u => u.UserId).Returns(studentId);
@@ -88,7 +88,7 @@ namespace ChainDegree.Application.Tests.Reports
             // Arrange
             var adminId = Guid.NewGuid();
             var reporterId = Guid.NewGuid();
-            var report = Report.Create(Guid.NewGuid(), reporterId, UserRoleEnum.Student, ReportTypeEnum.Fraudulent_Data, "Fake degree", "file123.pdf");
+            var report = Report.Create(Guid.NewGuid(), reporterId, UserRoleEnum.Student, ReportTypeEnum.Fraudulent_Data, "Fake degree", "file123.pdf").Value;
 
             _mockUserAccessor.Setup(u => u.IsAuthenticated).Returns(true);
             _mockUserAccessor.Setup(u => u.UserId).Returns(adminId);

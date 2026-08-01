@@ -22,7 +22,7 @@ namespace ChainDegree.Domain.Tests.Reports
             var fileName = "evidence_123.pdf";
 
             // Act
-            var report = Report.Create(degreeId, reporterId, role, reportType, description, fileName);
+            var report = Report.Create(degreeId, reporterId, role, reportType, description, fileName).Value;
 
             // Assert
             Assert.NotNull(report);
@@ -41,17 +41,17 @@ namespace ChainDegree.Domain.Tests.Reports
         }
 
         [Fact]
-        public void Create_EmptyDegreeId_ThrowsArgumentException()
+        public void Create_EmptyDegreeId_ReturnsFailure()
         {
-            Assert.Throws<ArgumentException>(() =>
-                Report.Create(Guid.Empty, Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Desc", "file.pdf"));
+            var result = Report.Create(Guid.Empty, Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Desc", "file.pdf");
+            Assert.True(result.IsFailure);
         }
 
         [Fact]
         public void Approve_PendingReview_FraudulentData_RaisesBothApprovedAndFraudulentEvents()
         {
             // Arrange
-            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Recruiter, ReportTypeEnum.Fraudulent_Data, "Fake degree detected", "proof.png");
+            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Recruiter, ReportTypeEnum.Fraudulent_Data, "Fake degree detected", "proof.png").Value;
             report.ClearDomainEvents();
             var universityId = Guid.NewGuid();
 
@@ -74,7 +74,7 @@ namespace ChainDegree.Domain.Tests.Reports
         public void Approve_PendingReview_AdministrativeError_RaisesOnlyReportApprovedEvent()
         {
             // Arrange
-            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Typo in name", "proof.pdf");
+            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Typo in name", "proof.pdf").Value;
             report.ClearDomainEvents();
 
             // Act
@@ -93,7 +93,7 @@ namespace ChainDegree.Domain.Tests.Reports
         public void Approve_AlreadyApproved_ReturnsFailure()
         {
             // Arrange
-            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Typo", "file.pdf");
+            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Student, ReportTypeEnum.Administrative_Error, "Typo", "file.pdf").Value;
             report.Approve();
 
             // Act
@@ -108,7 +108,7 @@ namespace ChainDegree.Domain.Tests.Reports
         public void Reject_ValidReason_SetsStatusRejectedAndRaisesEvent()
         {
             // Arrange
-            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Recruiter, ReportTypeEnum.Fraudulent_Data, "Invalid claim", "file.png");
+            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Recruiter, ReportTypeEnum.Fraudulent_Data, "Invalid claim", "file.png").Value;
             report.ClearDomainEvents();
             var reason = "Insufficient evidence provided.";
 
@@ -129,7 +129,7 @@ namespace ChainDegree.Domain.Tests.Reports
         public void Reject_EmptyReason_ReturnsFailure()
         {
             // Arrange
-            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Recruiter, ReportTypeEnum.Fraudulent_Data, "Invalid claim", "file.png");
+            var report = Report.Create(Guid.NewGuid(), Guid.NewGuid(), UserRoleEnum.Recruiter, ReportTypeEnum.Fraudulent_Data, "Invalid claim", "file.png").Value;
 
             // Act
             var result = report.Reject("");
