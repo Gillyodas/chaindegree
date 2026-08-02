@@ -238,6 +238,9 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 return;
             }
 
+            var triggerReason = degreesToProcess.Count >= _options.MaxBatchSize ? "MaxBatchReached" : "TimeoutReached";
+            _logger.LogInformation("Batch triggered. BatchSize={Size}, Reason={Reason}", degreesToProcess.Count, triggerReason);
+
             foreach (var degreeId in availableDegreeIds)
             {
                 var pr = await dbContext.DegreeProcessingRecords.FindAsync(degreeId);
@@ -321,8 +324,8 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 merkleStopwatch.Stop();
 
                 _metrics?.MerkleBuildTime.Observe(merkleStopwatch.Elapsed.TotalSeconds);
-                _logger.LogInformation("Merkle tree built for batch {BatchId}. Root={MerkleRoot}, LeafCount={LeafCount}, ElapsedMs={ElapsedMs}",
-                    batchId, treeResult.MerkleRoot, leafHashes.Count, merkleStopwatch.ElapsedMilliseconds);
+                _logger.LogInformation("Merkle tree built. Leaves={LeafCount}, Root={MerkleRoot}, ElapsedMs={ElapsedMs}",
+                    leafHashes.Count, treeResult.MerkleRoot, merkleStopwatch.ElapsedMilliseconds);
 
                 var batchRecord = new BatchRecord
                 {
@@ -388,8 +391,8 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                     _metrics?.BatchLatency.Observe(totalStopwatch.Elapsed.TotalSeconds);
                     _metrics?.BatchesProcessed.Inc();
 
-                    _logger.LogInformation("Batch {BatchId} confirmed. TxHash={BlockchainTxHash}, TotalElapsedMs={ElapsedMs}",
-                        batchId, txHash, totalStopwatch.ElapsedMilliseconds);
+                    _logger.LogInformation("Blockchain transaction submitted. TxHash={BlockchainTxHash}", txHash);
+                    _logger.LogInformation("Batch completed. Elapsed={ElapsedMs} ms", totalStopwatch.ElapsedMilliseconds);
                 }
                 else
                 {

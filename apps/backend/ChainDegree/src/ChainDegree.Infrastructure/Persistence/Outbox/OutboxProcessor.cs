@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -70,6 +72,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Outbox
                 return;
             }
 
+            var sw = Stopwatch.StartNew();
             _logger.LogInformation("Processing {Count} outbox messages...", messages.Count);
 
             foreach (var message in messages)
@@ -91,15 +94,19 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Outbox
                     await mediator.Publish(domainEvent, ct);
 
                     message.MarkAsProcessed();
+                    _logger.LogInformation("Outbox message published. MessageId={MessageId}, EventType={EventType}", message.Id, message.EventType);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to process outbox message {Id} of type {Type}.", message.Id, message.EventType);
                     message.MarkAsFailed(ex.Message);
+                    _logger.LogError(ex, "Publish failed. MessageId={MessageId}, EventType={EventType}, Retry={RetryCount}/{MaxRetry}, Reason={Reason}", 
+                        message.Id, message.EventType, message.RetryCount, _options.MaxRetryCount, ex.Message);
                 }
             }
 
             await context.SaveChangesAsync(ct);
+            sw.Stop();
+            _logger.LogInformation("Completed. Processed={Count}, Elapsed={ElapsedMs} ms", messages.Count, sw.ElapsedMilliseconds);
         }
     }
 }
