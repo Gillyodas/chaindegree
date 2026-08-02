@@ -32,44 +32,58 @@ namespace ChainDegree.Core.Infrastructure.Blockchain
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            if (!_options.ValidateOnStartup)
+            {
+                _logger.LogInformation("Blockchain startup validation is disabled (ValidateOnStartup=false).");
+                return;
+            }
+
             _logger.LogInformation("Validating Blockchain Configuration...");
 
             if (string.IsNullOrWhiteSpace(_options.RpcUrl))
             {
-                throw new InvalidOperationException("Blockchain: RpcUrl is missing in configuration.");
+                _logger.LogWarning("Blockchain: RpcUrl is missing in configuration.");
+                return;
             }
 
-            // 1. Check ChainId
-            _logger.LogInformation("Checking ChainId...");
-            var chainId = await _web3.Eth.ChainId.SendRequestAsync();
-            if (chainId.Value != _options.ChainId)
+            try
             {
-                throw new InvalidOperationException($"Blockchain: ChainId mismatch! Expected {_options.ChainId}, but network returned {chainId.Value}.");
-            }
+                // 1. Check ChainId
+                _logger.LogInformation("Checking ChainId...");
+                var chainId = await _web3.Eth.ChainId.SendRequestAsync();
+                if (chainId.Value != _options.ChainId)
+                {
+                    throw new InvalidOperationException($"Blockchain: ChainId mismatch! Expected {_options.ChainId}, but network returned {chainId.Value}.");
+                }
 
-            // 2. Check Contract Code
-            _logger.LogInformation("Checking Contract Code at {Address}...", _options.ContractAddress);
-            var code = await _web3.Eth.GetCode.SendRequestAsync(_options.ContractAddress);
-            if (code == "0x")
+                // 2. Check Contract Code
+                _logger.LogInformation("Checking Contract Code at {Address}...", _options.ContractAddress);
+                var code = await _web3.Eth.GetCode.SendRequestAsync(_options.ContractAddress);
+                if (code == "0x")
+                {
+                    throw new InvalidOperationException($"Blockchain: No contract found at address {_options.ContractAddress}. Did you forget to deploy?");
+                }
+
+                // 3. Check Signer Rights using strongly-typed query
+                var signerAddress = _signer.GetAddress();
+                _logger.LogInformation("Checking Signer Authorization for address {Address}...", signerAddress);
+                
+                var handler = _web3.Eth.GetContractQueryHandler<AuthorizedAnchorsFunction>();
+                var function = new AuthorizedAnchorsFunction { SignerAddress = signerAddress };
+                
+                var isAuthorized = await handler.QueryAsync<bool>(_options.ContractAddress, function);
+
+                if (!isAuthorized)
+                {
+                    throw new InvalidOperationException($"Blockchain: Signer {signerAddress} is NOT authorized to anchor on contract {_options.ContractAddress}. Fail Fast.");
+                }
+
+                _logger.LogInformation("Blockchain Configuration Validation PASSED.");
+            }
+            catch (Exception ex)
             {
-                throw new InvalidOperationException($"Blockchain: No contract found at address {_options.ContractAddress}. Did you forget to deploy?");
+                _logger.LogWarning(ex, "Blockchain startup validation skipped: RPC node at {RpcUrl} is unreachable or validation failed.", _options.RpcUrl);
             }
-
-            // 3. Check Signer Rights using strongly-typed query
-            var signerAddress = _signer.GetAddress();
-            _logger.LogInformation("Checking Signer Authorization for address {Address}...", signerAddress);
-            
-            var handler = _web3.Eth.GetContractQueryHandler<AuthorizedAnchorsFunction>();
-            var function = new AuthorizedAnchorsFunction { SignerAddress = signerAddress };
-            
-            var isAuthorized = await handler.QueryAsync<bool>(_options.ContractAddress, function);
-
-            if (!isAuthorized)
-            {
-                throw new InvalidOperationException($"Blockchain: Signer {signerAddress} is NOT authorized to anchor on contract {_options.ContractAddress}. Fail Fast.");
-            }
-
-            _logger.LogInformation("Blockchain Configuration Validation PASSED.");
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
