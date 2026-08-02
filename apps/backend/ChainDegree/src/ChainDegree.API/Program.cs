@@ -47,9 +47,11 @@ namespace ChainDegree.API
             builder.Services.Configure<JwtOptions>(
                 builder.Configuration.GetSection(JwtOptions.SectionName));
 
-            // Register health checks (EF Core database check)
+            // Register health checks (liveness vs readiness)
             builder.Services.AddHealthChecks()
-                .AddDbContextCheck<ChainDegreeDbContext>("Database");
+                .AddCheck("Self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("API is running"), tags: new[] { "live" })
+                .AddDbContextCheck<ChainDegreeDbContext>("Database", tags: new[] { "ready" })
+                .AddCheck<ChainDegree.Core.Infrastructure.Monitoring.BesuRpcHealthCheck>("BesuRPC", tags: new[] { "ready" });
 
             // Register custom filters and factories
             builder.Services.AddScoped<GlobalExceptionFilterAttribute>();
@@ -125,6 +127,14 @@ namespace ChainDegree.API
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+            {
+                Predicate = check => check.Tags.Contains("live")
+            });
+            app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+            {
+                Predicate = check => check.Tags.Contains("ready")
+            });
             app.MapHealthChecks("/health");
             app.MapControllers();
 
