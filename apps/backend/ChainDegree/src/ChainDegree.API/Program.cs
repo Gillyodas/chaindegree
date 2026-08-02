@@ -30,7 +30,13 @@ namespace ChainDegree.API
             // Register application services
             builder.Services.AddApplication();
             builder.Services.AddInfrastructure(builder.Configuration);
-            builder.Services.AddReputationModule(builder.Configuration);
+
+            // Module Toggle: Reputation Engine
+            var reputationEnabled = builder.Configuration.GetValue<bool>("Modules:Reputation:Enabled", true);
+            if (reputationEnabled)
+            {
+                builder.Services.AddReputationModule(builder.Configuration);
+            }
 
             // Register CORS for frontend integration
             builder.Services.AddCors(options =>
@@ -85,9 +91,10 @@ namespace ChainDegree.API
             app.UseCors("AllowAll");
             app.UseRateLimiter();
 
-            if (app.Environment.IsDevelopment())
+            var authProvider = builder.Configuration.GetValue<string>("Modules:Authentication:Provider") ?? "Mock";
+            if (string.Equals(authProvider, "Mock", StringComparison.OrdinalIgnoreCase))
             {
-                // Fake Auth Middleware to auto-populate ClaimsPrincipal based on dev headers or fallback defaults
+                // Mock/Fake Auth Middleware for local development and testing
                 app.Use(async (context, next) =>
                 {
                     var role = context.Request.Headers.TryGetValue("X-Role", out var r) ? r.ToString() : "Registrar";
@@ -104,19 +111,34 @@ namespace ChainDegree.API
                     context.User = new System.Security.Claims.ClaimsPrincipal(identity);
                     await next();
                 });
+            }
 
+            if (app.Environment.IsDevelopment())
+            {
                 app.MapOpenApi();
 
                 app.MapScalarApiReference(options =>
                 {
                     options.Title = "ChainDegree API";
                 });
+            }
 
-                // Auto Seed Development Database
-                using (var scope = app.Services.CreateScope())
+            // Seed Data: Exclusively when explicitly enabled in config or triggered via --seed argument
+            bool shouldSeed = args.Contains("--seed") || builder.Configuration.GetValue<bool>("SeedData:Enabled", false);
+            if (shouldSeed)
+            {
+                try
                 {
-                    var context = scope.ServiceProvider.GetRequiredService<ChainDegreeDbContext>();
-                    await ChainDegreeDbSeeder.SeedAsync(context);
+                    using (var scope = app.Services.CreateScope())
+                    {
+                        var context = scope.ServiceProvider.GetRequiredService<ChainDegreeDbContext>();
+                        await ChainDegreeDbSeeder.SeedAsync(context);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+                    logger.LogWarning(ex, "Seed Data execution skipped due to database connection or state issue.");
                 }
             }
 
