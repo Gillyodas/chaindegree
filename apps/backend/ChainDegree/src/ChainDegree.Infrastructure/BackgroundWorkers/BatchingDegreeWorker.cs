@@ -495,11 +495,11 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                     record.LastRetryAt = DateTime.UtcNow;
                     record.LastError = reason;
 
-                    if (record.RetryCount > 3)
+                    if (record.RetryCount >= 3)
                     {
                         record.State = "Failed";
                         record.NextRetryAt = null;
-                        if (record.ActionType == "Issue") item.d.MarkAsSyncError();
+                        item.d.MarkAsSyncError();
                     }
                     else
                     {
