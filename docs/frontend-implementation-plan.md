@@ -25,7 +25,7 @@ Xây dựng **SPA Frontend MVP** cho hệ thống ChainDegree bao phủ toàn b�
 
 ## Git Branch Strategy (Chiến Lược Nhánh Git Theo Phase)
 
-Mỗi **Phase** được phát triển trên **1 git branch riêng biệt**, checkout từ `develop` và merge lại qua Pull Request sau khi hoàn thành toàn bộ các Work Packages (WPs) thuộc Phase đó.
+Mỗi **Phase** được phát triển trên **1 git branch riêng biệt**, checkout từ `main` và merge lại qua Pull Request hoặc merge trực tiếp sau khi hoàn thành toàn bộ các Work Packages (WPs) thuộc Phase đó.
 
 ### Quy Ước Đặt Tên Nhánh (Branch Naming Convention)
 
@@ -48,19 +48,18 @@ frontend/phase-<N>-<short-description>
 
 ### Quy Trình Làm Việc (Git Workflow Rules)
 
-1. **Checkout**: Mỗi Phase tạo nhánh riêng từ `develop` (ví dụ `git checkout -b frontend/phase-0-foundation develop`).
+1. **Checkout**: Mỗi Phase tạo nhánh riêng từ `main` (ví dụ `git checkout -b frontend/phase-0-foundation main`).
 2. **Commit per WP**: Mỗi WP hoàn thành được commit với message chuẩn conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
-3. **PR & Merge**: Sau khi hoàn thành tất cả WPs trong Phase, tạo Pull Request merge nhánh Phase vào `develop`.
-4. **Tag Hoàn Thành Phase**: Sau khi merge PR, đánh tag: `frontend-p<N>-complete` (ví dụ `frontend-p0-complete`).
-5. **Release Milestone**: `develop` → `main` khi hoàn thành Phase 7.
+3. **PR & Merge**: Sau khi hoàn thành tất cả WPs trong Phase, merge nhánh Phase vào `main`.
+4. **Tag Hoàn Thành Phase**: Sau khi merge, đánh tag: `frontend-p<N>-complete` (ví dụ `frontend-p0-complete`).
 
 ```mermaid
 graph LR
-    D[develop] -->|checkout| P0["frontend/phase-0-foundation"]
-    P0 -->|commit WP-0.1..0.7| P0
-    P0 -->|PR + squash merge| D
-    D -->|tag| T0["frontend-p0-complete"]
-    D -->|checkout| P1["frontend/phase-1-degree-issuance"]
+    M[main] -->|checkout| P0["frontend/phase-0-foundation"]
+    P0 -->|commit WP-0.1..0.9| P0
+    P0 -->|merge| M
+    M -->|tag| T0["frontend-p0-complete"]
+    M -->|checkout| P1["frontend/phase-1-degree-issuance"]
 ```
 
 ---
