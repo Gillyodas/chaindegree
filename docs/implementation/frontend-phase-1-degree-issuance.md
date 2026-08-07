@@ -45,3 +45,91 @@ Phase 1 (US-1 / UC-1) triển khai hoàn chỉnh giao diện cấp bằng cho Re
 ## Proposed Changes — Work Packages Chi Tiết
 
 ---
+
+### WP-1.1: Feature `degree` — API Layer & Types
+
+#### Tasks
+- [ ] Định nghĩa các Interface/Type tại `src/features/degree/degree.types.ts`:
+  - Request: `IssueDegreeItemRequest`, `IssueDegreeRequest`, `BatchStatusResponse`.
+  - Response: `DegreeListItem`, `DegreeDetail`, `IssueDegreeResponse`.
+  - Type: `DegreeStatus`.
+- [ ] Khởi tạo API Service tại `src/features/degree/degree.api.ts`:
+  - Hàm `issueDegrees(data, idempotencyKey)` thực hiện POST tới `/api/v1/institutions/degrees`.
+  - Hàm `getBatchStatus(batchId)` thực hiện GET tới `/api/v1/institutions/degrees/batches/{batchId}`.
+  - Hàm `retryDegreeConfirmation(id)` thực hiện POST tới `/api/v1/institutions/degrees/{id}/retry`.
+  - Hàm `getDegrees()` fallback fetching list of degrees.
+  - Hàm `getDegree(id)` fallback fetching degree details.
+- [ ] Khởi tạo Query Keys Factory tại `src/features/degree/degree.keys.ts`:
+  - `degreeKeys.all`, `degreeKeys.lists()`, `degreeKeys.detail(id)`, `degreeKeys.batchStatus(batchId)`.
+
+#### Output
+- [NEW] `src/features/degree/degree.types.ts`
+- [NEW] `src/features/degree/degree.api.ts`
+- [NEW] `src/features/degree/degree.keys.ts`
+
+#### Done Criteria
+- Khai báo type đầy đủ và khớp với thiết kế API Specification.
+- API Methods được gọi đúng URI và phương thức POST/GET.
+- Đủ query keys cho các luồng danh sách, chi tiết, và batch status.
+
+#### Commit
+```text
+feat(degree): define types, API service, and query key factory
+```
+
+---
+
+### WP-1.2: Custom Hooks — Mutations & Queries
+
+#### Tasks
+- [ ] Tạo hooks fetch data và mutation tại `src/features/degree/hooks`:
+  - `useIssueDegreesMutation`: gọi API issue, handle thành công (invalidate list query) + báo lỗi.
+  - `useDegreesQuery`: query list.
+  - `useDegreeDetailQuery(id)`: query chi tiết.
+  - `useBatchStatusQuery(batchId)`: query trạng thái batch với Polling 5 giây (chỉ bật khi SignalR disconnect).
+  - `useRetryDegreeMutation`: gọi retry.
+- [ ] Xử lý logic hiển thị Toast Notifications trong hàm `onSuccess`/`onError` của mutation hooks.
+
+#### Output
+- [NEW] `src/features/degree/hooks/useIssueDegrees.ts`
+- [NEW] `src/features/degree/hooks/useDegreeQueries.ts`
+
+#### Done Criteria
+- Invalidate list data khi issue thành công.
+- Hook trả về loading, error states, và data tương ứng cho UI.
+
+#### Commit
+```text
+feat(degree): implement issuance mutations and queries hooks
+```
+
+---
+
+### WP-1.3: Degree Issuance Form (Core UI)
+
+#### Tasks
+- [ ] Tạo Schema validation với Zod tại `src/features/degree/components/IssueDegreeForm.tsx`:
+  - Zod validate cho: StudentId phải đúng định dạng UUID, Major, Classification phải đúng enum.
+- [ ] Xây dựng Component Form có khả năng thêm xóa các trường:
+  - Form field array hiển thị dạng bảng: Student Id, Major, Classification, Issued At.
+  - Nút `[+ Add Degree]` cho row mới, nút `[Remove]` cho row.
+- [ ] Xử lý logic nộp đơn (Submit):
+  - Sinh UUID phía FE làm `Idempotency-Key`.
+  - Catch lỗi partial failures (`failures[]`) từ BE.
+  - Nếu thành công tất cả, clear form và toast báo. Nếu thất bại, highlight dòng lỗi và toast báo lỗi.
+
+#### Output
+- [NEW] `src/features/degree/components/IssueDegreeForm.tsx`
+
+#### Done Criteria
+- Validate được Client-side (required, format) chặn spam submit khi lỗi.
+- Nhập liệu nhiều row linh hoạt và gửi đủ request kèm idempotency key.
+- Xử lý được partial failure từ backend theo quy định AC3 US-1.
+- Toast thông báo thành công hiển thị tiếng Anh chính xác: *"Successfully submitted X degree(s). The system is processing verification in the background."*
+
+#### Commit
+```text
+feat(degree): build dynamic degree issuance form with Zod validation
+```
+
+---
