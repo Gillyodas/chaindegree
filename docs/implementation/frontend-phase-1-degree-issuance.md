@@ -133,3 +133,115 @@ feat(degree): build dynamic degree issuance form with Zod validation
 ```
 
 ---
+
+### WP-1.4: Degree List Page
+
+#### Tasks
+- [ ] Xây dựng Component Page tại `src/features/degree/pages/DegreeListPage.tsx`:
+  - Fetch dữ liệu list qua hook `useDegreesQuery`.
+  - Hiển thị UI table với các cột: DegreeCode, StudentName, Major, Classification, Status, IssuedAt, Actions.
+  - Sử dụng component `<StatusBadge />` để hiển thị trạng thái (🟡, 🟢, 🔴).
+  - Tích hợp pagination đơn giản.
+  - Link dòng row sang trang chi tiết `/degrees/:id`.
+- [ ] Thêm nút `[Retry]` (chỉ hiện khi status là `Confirmation_Error`):
+  - Nhấn nút gọi mutation `useRetryDegreeMutation`.
+- [ ] Xử lý Loading state và Empty State (*"No degrees found"*).
+
+#### Output
+- [NEW] `src/features/degree/pages/DegreeListPage.tsx`
+
+#### Done Criteria
+- Hiển thị danh sách chính xác với dữ liệu fetch được.
+- Phản hồi đúng trạng thái màu sắc cho các Status khác nhau.
+- Nút Retry hoạt động và trigger API đúng.
+
+#### Commit
+```text
+feat(degree): create degree list page with status badges
+```
+
+---
+
+### WP-1.5: Degree Detail Page (Skeleton)
+
+#### Tasks
+- [ ] Khởi tạo Component tại `src/features/degree/pages/DegreeDetailPage.tsx`:
+  - Lấy `id` từ URL parameter, gọi API qua `useDegreeDetailQuery`.
+  - Render skeleton loading khi chưa có dữ liệu.
+  - Hiển thị form readonly đầy đủ chi tiết bằng cấp.
+- [ ] Tạo các Placeholders cho hành động (Actions):
+  - Button `[Update]` và `[Revoke]` (Dành cho Phase 2).
+  - Button `[Report Issue]` (Dành cho Phase 4).
+- [ ] Thêm liên kết quay lại trang danh sách `< Quay Lại`.
+
+#### Output
+- [NEW] `src/features/degree/pages/DegreeDetailPage.tsx`
+
+#### Done Criteria
+- Hiển thị đầy đủ thông tin chi tiết bằng cấp.
+- Khung UI sẵn sàng cho các phase sau gắn link và hành động vào.
+- Error state khi `id` không tồn tại được map đúng thông qua Global ErrorBoundary / ErrorMapper.
+
+#### Commit
+```text
+feat(degree): add degree detail page skeleton
+```
+
+---
+
+### WP-1.6: SignalR Realtime Status Updates
+
+#### Tasks
+- [ ] Tích hợp client SignalR tại `src/shared/lib/signalr.ts`:
+  - Helper wrapper cấu hình `@microsoft/signalr`.
+  - Kết nối Hub từ biến env `VITE_SIGNALR_URL`.
+- [ ] Lắng nghe sự kiện trong React (có thể viết 1 custom hook `useSignalRDegreeStatus`):
+  - Khi BE phát `DegreeStatusUpdated` / `BatchCompleted`, invalidate query key `degreeKeys.all`.
+- [ ] Phối hợp SignalR với Polling:
+  - Nếu kết nối SignalR đang active, tắt `refetchInterval` của `useBatchStatusQuery` và `useDegreesQuery`.
+  - Nếu kết nối SignalR mất, bật `refetchInterval: 5000` (polling fallback).
+  - Khôi phục SignalR, tắt lại polling.
+
+#### Output
+- [NEW] `src/shared/lib/signalr.ts`
+- [MODIFY] `src/features/degree/hooks/useDegreeQueries.ts` (điều chỉnh refetchInterval)
+
+#### Done Criteria
+- Lắng nghe thành công event từ Hub.
+- UI (Status badge, bảng list) tự động update khi BE phát event, không cần người dùng thao tác hay F5.
+- Cơ chế Fallback hoạt động đúng (Polling chỉ bật khi đứt kết nối WebSocket/SignalR).
+
+#### Commit
+```text
+feat(degree): integrate SignalR realtime status update listener with polling fallback
+```
+
+---
+
+## Testing Plan
+
+### Unit Test Plan
+
+| Test Target | Test Case | Tool |
+|---|---|---|
+| `degree.api.ts` | Mock Axios, verify URL, Method, Headers (Idempotency) | Vitest |
+| `useIssueDegreesMutation` | Mock API response, check invalidate cache và toast success/error | Vitest |
+| `IssueDegreeForm` | Validate Zod schema: Required fields, đúng UUID format | Vitest + RTL |
+| `StatusBadge` | Component render đúng màu và nhãn ứng với enum `DegreeStatus` | Vitest + RTL |
+| `degree.keys.ts` | Query keys sinh cấu trúc array nhất quán theo format `['degrees', ...]` | Vitest |
+
+### Integration Test (E2E)
+
+- **Scenario:** *Cấp bằng cấp thành công và realtime nhận trạng thái*
+  1. Mở trang `/degrees/issue` (Mô phỏng role Registrar).
+  2. Bấm nút `[+ Add Degree]`, nhập dữ liệu hợp lệ.
+  3. Bấm Submit. Bắt intercept request gửi lên.
+  4. Xác nhận Toast *"Successfully submitted..."* hiện lên.
+  5. Chuyển sang trang `/degrees`, Verify row vừa thêm có badge màu vàng (Pending).
+  6. Mock dispatch một event SignalR `DegreeStatusUpdated` sang thành `Confirmed`.
+  7. Verify dòng dữ liệu đó badge tự đổi sang màu xanh (Confirmed) mà không cần reload trang.
+
+#### Commit Testing
+```text
+test(degree): add unit tests for degree API, hooks, and form validation
+```
