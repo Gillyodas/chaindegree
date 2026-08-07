@@ -96,5 +96,21 @@ Documenting the core architecture, classes, and logic of ChainDegree.
 - **[VerifyDegreeErrorResponse](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/Contracts/Degrees/VerifyDegreeErrorResponse.cs)**: Structured error response contract preventing internal data leakage.
 - **[DegreesController.VerifyDegree](file:///e:/codes/chaindegree/apps/backend/ChainDegree/src/ChainDegree.API/Controllers/DegreesController.cs#L155-L190)**: Public endpoint (`POST /api/v1/institutions/degrees/verify`) hardened with `[AllowAnonymous]`, `[RequestSizeLimit(65_536)]` (64KB DoS protection), and `[EnableRateLimiting("verify-degree")]` (30 req/min enumeration protection).
 
+---
+
+## 6. Frontend Architecture & Foundation (`Phase 0`)
+
+- **[Vite + React 19 + TypeScript SPA](file:///e:/codes/chaindegree/apps/frontend)**: Frontend single page application scaffolded at `apps/frontend/`.
+- **[Env Configuration](file:///e:/codes/chaindegree/apps/frontend/src/app/config/env.ts)**: Fail-fast environment reader (`env.ts`) validating required vars (`VITE_API_BASE_URL`, `VITE_API_TIMEOUT`) and optional flags (`VITE_SIGNALR_URL`, `VITE_REPUTATION_ENABLED`).
+- **[HTTP Client](file:///e:/codes/chaindegree/apps/frontend/src/shared/api/http.ts)**: Axios singleton (`httpClient`) with `TokenProvider` extension point (`configureHttpAuth`). No auth header attached in Phase 0. Response interceptor throws structured `HttpError` (`not_found`, `forbidden`, `conflict`, `validation`, `server_error`, `timeout`, `network`, `unauthorized`).
+- **[API Error Mapper](file:///e:/codes/chaindegree/apps/frontend/src/shared/api/error-mapper.ts)**: Translates `HttpError` business error codes to English messages. Does NOT map 404 globally to empty state — UI components decide rendering based on context.
+- **[Mock Auth Provider](file:///e:/codes/chaindegree/apps/frontend/src/app/providers/AuthProvider.tsx)**: Temp mock authentication provider with pre-configured mock credentials for 4 roles (`Registrar`, `Student`, `Recruiter`, `Admin`). Includes `useAuth()` hook and role switcher support.
+- **[App Router & Protection](file:///e:/codes/chaindegree/apps/frontend/src/app/router/AppRouter.tsx)**: React Router v7 setup with lazy-loaded feature pages (`Degree`, `Verification`, `Report`, `Reputation`, `Recruitment`) and role-based `ProtectedRoute` route guard.
+- **[App Layouts](file:///e:/codes/chaindegree/apps/frontend/src/app/layouts)**: `DashboardLayout` (sidebar with role-filtered navigation, header with dev role switcher dropdown) and `PublicLayout` (header with logo and login link).
+- **[Error Boundary](file:///e:/codes/chaindegree/apps/frontend/src/shared/components/ErrorBoundary.tsx)**: React class error boundary wrapping application router, catching render crashes, displaying English fallback UI, and providing retry capability.
+- **[Shared UI Components](file:///e:/codes/chaindegree/apps/frontend/src/shared/components)**: Reusable components built with TailwindCSS v4 and shadcn/ui (`StatusBadge`, `LoadingSpinner`, `EmptyState`, `ConfirmDialog`, `FileUpload`, `ErrorState`).
+- **[Vitest Unit Test Suite](file:///e:/codes/chaindegree/apps/frontend/src/test/setup.ts)**: 31 unit tests covering error mapper, date formatters, notification service, StatusBadge, ProtectedRoute, ErrorBoundary, and MockAuthProvider.
+
+
 
 
