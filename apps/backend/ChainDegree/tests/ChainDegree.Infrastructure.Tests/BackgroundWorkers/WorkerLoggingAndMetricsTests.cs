@@ -56,11 +56,13 @@ namespace ChainDegree.Infrastructure.Tests.BackgroundWorkers
         {
             // Arrange
             var metrics = new WorkerMetrics();
+            var mockNonceManager = new Mock<ChainDegree.Core.Application.Abstractions.Blockchain.INonceManager>();
 
             // Act
             var worker = new BatchingDegreeWorker(
                 _mockServiceProvider.Object,
                 _mockOptions.Object,
+                mockNonceManager.Object,
                 _mockLogger.Object,
                 metrics);
 

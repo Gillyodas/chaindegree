@@ -30,6 +30,7 @@ namespace ChainDegree.Infrastructure.Tests.BackgroundWorkers
         private readonly Mock<IBlockchainService> _mockBlockchain;
         private readonly Mock<IDegreeRepository> _mockRepo;
         private readonly Mock<IOptions<BatchingWorkerOptions>> _mockOptions;
+        private readonly Mock<INonceManager> _mockNonceManager;
         private readonly Mock<ILogger<BatchingDegreeWorker>> _mockLogger;
 
         public BatchingDegreeWorkerTests()
@@ -39,6 +40,7 @@ namespace ChainDegree.Infrastructure.Tests.BackgroundWorkers
             _mockBlockchain = new Mock<IBlockchainService>();
             _mockRepo = new Mock<IDegreeRepository>();
             _mockOptions = new Mock<IOptions<BatchingWorkerOptions>>();
+            _mockNonceManager = new Mock<INonceManager>();
             _mockLogger = new Mock<ILogger<BatchingDegreeWorker>>();
 
             var options = new BatchingWorkerOptions
@@ -58,6 +60,7 @@ namespace ChainDegree.Infrastructure.Tests.BackgroundWorkers
             var worker = new BatchingDegreeWorker(
                 _mockServiceProvider.Object,
                 _mockOptions.Object,
+                _mockNonceManager.Object,
                 _mockLogger.Object);
 
             // Assert
