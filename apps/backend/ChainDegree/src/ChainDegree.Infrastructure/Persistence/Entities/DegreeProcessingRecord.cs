@@ -11,6 +11,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Entities
         public DateTime? NextRetryAt { get; set; }
         public DateTime? LastRetryAt { get; set; }
         public DateTime? LeaseUntil { get; set; }
+        public string? LeaseId { get; set; }
         public string? WorkerId { get; set; }
         public string? LastError { get; set; }
         public string? BlockchainTxHash { get; set; }

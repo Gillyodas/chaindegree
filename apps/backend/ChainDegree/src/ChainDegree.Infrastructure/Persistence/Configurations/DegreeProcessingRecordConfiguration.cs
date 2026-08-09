@@ -21,6 +21,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
             builder.Property(x => x.NextRetryAt);
             builder.Property(x => x.LastRetryAt);
             builder.Property(x => x.LeaseUntil);
+            builder.Property(x => x.LeaseId).HasMaxLength(100);
             builder.Property(x => x.WorkerId).HasMaxLength(100);
             builder.Property(x => x.LastError).HasMaxLength(4000);
             builder.Property(x => x.BlockchainTxHash).HasMaxLength(150);
