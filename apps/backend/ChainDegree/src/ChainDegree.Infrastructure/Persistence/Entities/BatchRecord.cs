@@ -7,7 +7,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Entities
         public Guid Id { get; set; }
         public Guid InstitutionId { get; set; }
         public string BatchName { get; set; } = null!;
-        public string Status { get; set; } = "Pending";
+        public string Status { get; set; } = BatchStatus.Pending; // Pending, Processing, Unknown, Submitted, Completed, Failed
         public int DegreeCount { get; set; }
         public string? MerkleRoot { get; set; }
         public string? TxHash { get; set; }

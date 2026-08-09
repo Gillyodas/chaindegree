@@ -6,7 +6,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Entities
     {
         public Guid DegreeId { get; set; }
         public string ActionType { get; set; } = null!; // Issue, Update, Revoke
-        public string State { get; set; } = null!; // Queued, Processing, Completed, Failed
+        public string State { get; set; } = DegreeProcessingState.Queued; // Queued, Processing, Unknown, Submitted, Completed, Failed
         public int RetryCount { get; set; }
         public DateTime? NextRetryAt { get; set; }
         public DateTime? LastRetryAt { get; set; }
