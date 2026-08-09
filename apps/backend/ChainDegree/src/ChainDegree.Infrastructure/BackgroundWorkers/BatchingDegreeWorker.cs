@@ -379,8 +379,11 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 {
                     ["BatchCorrelationId"] = batchCorrelationId,
                     ["BatchId"] = batch.Id,
+                    ["BatchStatus"] = batch.Status,
                     ["BlockchainTxHash"] = batch.TxHash ?? string.Empty
                 });
+
+                _logger.LogInformation("Reconciling pending batch {BatchId} with status {Status}...", batch.Id, batch.Status);
 
                 var recoverySw = Stopwatch.StartNew();
 
