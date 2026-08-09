@@ -47,12 +47,14 @@ namespace ChainDegree.Infrastructure.Tests.BackgroundWorkers
             {
                 MaxBatchSize = 2,
                 MaxWaitTimeSeconds = 180,
-                PollingIntervalSeconds = 1
+                PollingIntervalSeconds = 1,
+                ConsumerCount = 2,
+                ChannelCapacity = 50,
+                LeaseDurationMinutes = 3
             };
             _mockOptions.Setup(o => o.Value).Returns(options);
         }
 
-        // We can test the constructor and verify HostedService lifecycle runs cleanly
         [Fact]
         public void Constructor_WithValidArguments_ShouldInstantiate()
         {
@@ -65,6 +67,39 @@ namespace ChainDegree.Infrastructure.Tests.BackgroundWorkers
 
             // Assert
             Assert.NotNull(worker);
+        }
+
+        [Fact]
+        public void BatchingWorkerOptions_DefaultValues_ShouldBeConfiguredCorrectly()
+        {
+            // Act
+            var defaultOptions = new BatchingWorkerOptions();
+
+            // Assert
+            Assert.Equal(500, defaultOptions.MaxBatchSize);
+            Assert.Equal(180, defaultOptions.MaxWaitTimeSeconds);
+            Assert.Equal(10, defaultOptions.PollingIntervalSeconds);
+            Assert.Equal(4, defaultOptions.ConsumerCount);
+            Assert.Equal(100, defaultOptions.ChannelCapacity);
+            Assert.Equal(5, defaultOptions.LeaseDurationMinutes);
+        }
+
+        [Fact]
+        public async Task StartAsync_And_StopAsync_ShouldExecuteGracefully()
+        {
+            // Arrange
+            var worker = new BatchingDegreeWorker(
+                _mockServiceProvider.Object,
+                _mockOptions.Object,
+                _mockNonceManager.Object,
+                _mockLogger.Object);
+
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(200);
+
+            // Act & Assert
+            await worker.StartAsync(cts.Token);
+            await worker.StopAsync(CancellationToken.None);
         }
     }
 }
