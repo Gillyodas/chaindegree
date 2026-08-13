@@ -18,6 +18,7 @@ namespace ChainDegree.API.Extensions
             public const string Revoke = "degrees:revoke";
             public const string Retry = "degrees:retry";
             public const string BatchStatus = "degrees:batch-status";
+            public const string Read = "degrees:read";
         }
 
         public static class Students
@@ -116,6 +117,13 @@ namespace ChainDegree.API.Extensions
             });
 
             options.AddFixedWindowLimiter(RateLimitPolicies.Degrees.BatchStatus, config =>
+            {
+                config.PermitLimit = 120;
+                config.Window = TimeSpan.FromMinutes(1);
+                config.QueueLimit = 0;
+            });
+
+            options.AddFixedWindowLimiter(RateLimitPolicies.Degrees.Read, config =>
             {
                 config.PermitLimit = 120;
                 config.Window = TimeSpan.FromMinutes(1);
