@@ -80,14 +80,24 @@ describe('degreeApi', () => {
   });
 
   describe('getDegrees', () => {
-    it('should send GET request to fetch degree list', async () => {
-      const mockList = [{ id: '1', degreeCode: 'DEG-1', status: 'Confirmed' }];
-      (httpClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockList });
+    it('should send GET request with pageIndex and pageSize params', async () => {
+      const mockPagedResult = {
+        items: [{ id: '1', degreeCode: 'DEG-1', status: 'Confirmed' }],
+        totalCount: 1,
+        pageIndex: 1,
+        pageSize: 20,
+        totalPages: 1,
+        hasPreviousPage: false,
+        hasNextPage: false,
+      };
+      (httpClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockPagedResult });
 
-      const result = await degreeApi.getDegrees();
+      const result = await degreeApi.getDegrees(1, 20);
 
-      expect(httpClient.get).toHaveBeenCalledWith('/api/v1/institutions/degrees');
-      expect(result).toEqual(mockList);
+      expect(httpClient.get).toHaveBeenCalledWith('/api/v1/institutions/degrees', {
+        params: { pageIndex: 1, pageSize: 20 },
+      });
+      expect(result).toEqual(mockPagedResult);
     });
 
     it('should throw error when GET request fails (no fallback in API layer)', async () => {
