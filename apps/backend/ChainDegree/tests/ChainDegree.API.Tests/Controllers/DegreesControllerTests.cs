@@ -9,6 +9,9 @@ using ChainDegree.Core.Application.Degrees.Commands.RetryDegreeConfirmation;
 using ChainDegree.Core.Application.Degrees.Queries.GetBatchStatus;
 using ChainDegree.Core.Application.Degrees.Commands.RevokeDegree;
 using ChainDegree.Core.Application.Degrees.Commands.UpdateDegree;
+using ChainDegree.Core.Application.Degrees.Queries.DTOs;
+using ChainDegree.Core.Application.Degrees.Queries.GetDegrees;
+using ChainDegree.Core.Application.Degrees.Queries.GetDegreeById;
 using ChainDegree.Core.Application.Degrees.Queries.VerifyDegree;
 using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
 using ChainDegree.Core.Application.Abstractions.Queries;
@@ -60,6 +63,82 @@ namespace ChainDegree.API.Tests.Controllers
             var returnedValue = Assert.IsType<IssueDegreeResponse>(acceptedResult.Value);
             Assert.Equal(1, returnedValue.AcceptedCount);
             Assert.Empty(returnedValue.Failures);
+        }
+
+        [Fact]
+        public async Task GetDegrees_WithValidQuery_ReturnsOk()
+        {
+            // Arrange
+            var pagedResult = new PagedResult<DegreeListDto>(
+                new List<DegreeListDto>
+                {
+                    new(Guid.NewGuid(), "DEG-001", Guid.NewGuid(), "Student A", "SE", "Gioi", "Confirmed", DateTime.UtcNow, "0x1")
+                },
+                totalCount: 1,
+                pageIndex: 1,
+                pageSize: 20
+            );
+
+            _mockSender.Setup(s => s.Send(It.IsAny<GetDegreesQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<PagedResult<DegreeListDto>>.Success(pagedResult));
+
+            // Act
+            var result = await _controller.GetDegrees(1, 20, CancellationToken.None);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedValue = Assert.IsType<PagedResult<DegreeListDto>>(okResult.Value);
+            Assert.Equal(1, returnedValue.TotalCount);
+        }
+
+        [Fact]
+        public async Task GetDegreeById_WithValidId_ReturnsOk()
+        {
+            // Arrange
+            var degreeId = Guid.NewGuid();
+            var detailDto = new DegreeDetailDto(
+                degreeId,
+                "DEG-002",
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "Student B",
+                "CS",
+                "Xuat Sac",
+                "Confirmed",
+                DateTime.UtcNow,
+                "0x2",
+                1,
+                DateTime.UtcNow,
+                null
+            );
+
+            _mockSender.Setup(s => s.Send(It.IsAny<GetDegreeByIdQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<DegreeDetailDto>.Success(detailDto));
+
+            // Act
+            var result = await _controller.GetDegreeById(degreeId, CancellationToken.None);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var returnedValue = Assert.IsType<DegreeDetailDto>(okResult.Value);
+            Assert.Equal("DEG-002", returnedValue.DegreeCode);
+        }
+
+        [Fact]
+        public async Task GetDegreeById_WithNotFoundOrCrossTenant_ReturnsNotFound()
+        {
+            // Arrange
+            var degreeId = Guid.NewGuid();
+            _mockSender.Setup(s => s.Send(It.IsAny<GetDegreeByIdQuery>(), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<DegreeDetailDto>.Failure(DegreeErrors.NotFound));
+
+            // Act
+            var result = await _controller.GetDegreeById(degreeId, CancellationToken.None);
+
+            // Assert
+            var objectResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(StatusCodes.Status404NotFound, objectResult.StatusCode);
         }
 
         [Fact]
