@@ -7,6 +7,15 @@ import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { LoginPage } from '@/features/auth';
 
 // Lazy loading page-level components ONLY
+const DegreeListPage = lazy(() =>
+  import('@/features/degree').then((m) => ({ default: m.DegreeListPage })),
+);
+const DegreeDetailPage = lazy(() =>
+  import('@/features/degree').then((m) => ({ default: m.DegreeDetailPage })),
+);
+const IssueDegreeForm = lazy(() =>
+  import('@/features/degree').then((m) => ({ default: m.IssueDegreeForm })),
+);
 const DegreeComingSoonPage = lazy(() =>
   import('@/features/degree').then((m) => ({ default: m.DegreeComingSoonPage })),
 );
@@ -54,19 +63,13 @@ export function AppRouter() {
                   element={<DegreeComingSoonPage title="ChainDegree Overview Dashboard" />}
                 />
 
-                {/* Degree Routes (Registrar & Student) */}
-                <Route path="/degrees" element={<DegreeComingSoonPage title="Degree List" />} />
-                <Route
-                  path="/degrees/:id"
-                  element={<DegreeComingSoonPage title="Degree Detail" />}
-                />
+                {/* Degree Routes */}
+                <Route path="/degrees" element={<DegreeListPage />} />
+                <Route path="/degrees/:id" element={<DegreeDetailPage />} />
 
                 {/* Issue Degree Route (Registrar Only) */}
                 <Route element={<ProtectedRoute allowedRoles={['Registrar']} />}>
-                  <Route
-                    path="/degrees/issue"
-                    element={<DegreeComingSoonPage title="Issue Degrees" />}
-                  />
+                  <Route path="/degrees/issue" element={<IssueDegreeForm />} />
                 </Route>
 
                 {/* Admin Report Review Route (Admin Only) */}
