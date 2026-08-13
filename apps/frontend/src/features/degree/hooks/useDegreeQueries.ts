@@ -5,19 +5,22 @@ import type {
   DegreeListItem,
   DegreeDetail,
   BatchStatusResponse,
+  PagedResult,
 } from '../degree.types';
 
 export interface UseDegreesQueryOptions {
+  pageIndex?: number;
+  pageSize?: number;
   enabled?: boolean;
   isSignalRConnected?: boolean;
 }
 
 export function useDegreesQuery(options: UseDegreesQueryOptions = {}) {
-  const { enabled = true, isSignalRConnected = false } = options;
+  const { pageIndex = 1, pageSize = 20, enabled = true, isSignalRConnected = false } = options;
 
-  return useQuery<DegreeListItem[], Error>({
-    queryKey: degreeKeys.lists(),
-    queryFn: () => degreeApi.getDegrees(),
+  return useQuery<PagedResult<DegreeListItem>, Error>({
+    queryKey: degreeKeys.lists(pageIndex, pageSize),
+    queryFn: () => degreeApi.getDegrees(pageIndex, pageSize),
     enabled,
     refetchInterval: isSignalRConnected ? false : 5000,
   });
@@ -44,9 +47,8 @@ export function useRetryDegreeMutation() {
 
   return useMutation<void, Error, string>({
     mutationFn: (id: string) => degreeApi.retryDegreeConfirmation(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: degreeKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: degreeKeys.detail(id) });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: degreeKeys.all });
     },
   });
 }

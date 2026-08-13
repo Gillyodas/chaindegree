@@ -39,13 +39,13 @@ const statusConfigs: Record<DegreeStatus, StatusConfig> = {
 };
 
 export interface StatusBadgeProps {
-  status: DegreeStatus;
+  status: DegreeStatus | string;
   className?: string;
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfigs[status] ?? {
-    label: status,
+  const config = (statusConfigs as Record<string, StatusConfig>)[status] ?? {
+    label: status || 'Unknown',
     className: 'bg-muted text-muted-foreground',
   };
 

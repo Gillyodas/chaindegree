@@ -15,7 +15,10 @@ export function DegreeListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  const { data: degrees, isLoading, error, refetch } = useDegreesQuery();
+  const { data: pagedData, isLoading, error, refetch } = useDegreesQuery({
+    pageIndex: currentPage,
+    pageSize,
+  });
   const retryMutation = useRetryDegreeMutation();
 
   const handleRetry = (id: string) => {
@@ -37,7 +40,6 @@ export function DegreeListPage() {
     );
   }
 
-  // Differentiate 404 / NotFound from Server / Network Error
   const isNotFound = error instanceof HttpError && error.type === 'not_found';
 
   if (error && !isNotFound) {
@@ -50,15 +52,10 @@ export function DegreeListPage() {
     );
   }
 
-  const degreeList = degrees ?? [];
+  const degreeList = pagedData?.items ?? [];
+  const totalCount = pagedData?.totalCount ?? 0;
+  const totalPages = pagedData?.totalPages ?? 1;
   const isEmpty = degreeList.length === 0 || isNotFound;
-
-  // Pagination logic (client-side)
-  const totalPages = Math.ceil(degreeList.length / pageSize) || 1;
-  const paginatedDegrees = degreeList.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
 
   return (
     <div className="space-y-6">
@@ -82,7 +79,7 @@ export function DegreeListPage() {
           <div>
             <CardTitle className="text-lg font-semibold">Issued Degrees</CardTitle>
             <CardDescription>
-              Total {degreeList.length} degree(s) recorded in system.
+              Total {totalCount} degree(s) recorded in system.
             </CardDescription>
           </div>
           <Button
@@ -126,7 +123,7 @@ export function DegreeListPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {paginatedDegrees.map((degree) => (
+                    {degreeList.map((degree) => (
                       <tr
                         key={degree.id}
                         className="hover:bg-muted/30 transition-colors"
@@ -140,7 +137,7 @@ export function DegreeListPage() {
                           </Link>
                         </td>
                         <td className="p-3">
-                          {degree.studentName || degree.studentId}
+                          {degree.studentFullName || degree.studentId}
                         </td>
                         <td className="p-3">{degree.major}</td>
                         <td className="p-3">{degree.classification}</td>

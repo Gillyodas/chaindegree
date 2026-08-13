@@ -31,30 +31,43 @@ export interface IssueDegreeResponse {
   failures: IssueDegreeFailure[];
 }
 
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  pageIndex: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
 export interface DegreeListItem {
   id: string;
   degreeCode: string;
   studentId: string;
-  studentName?: string;
+  studentFullName: string;
   major: string;
   classification: string;
-  status: DegreeStatus;
+  status: DegreeStatus | string;
   issuedAt: string;
-  createdAt: string;
+  txHashBlockchain?: string | null;
 }
 
 export interface DegreeDetail {
   id: string;
   degreeCode: string;
+  institutionId: string;
+  signedByRegistrarId: string;
   studentId: string;
-  studentName?: string;
+  studentFullName: string;
   major: string;
   classification: string;
-  status: DegreeStatus;
+  status: DegreeStatus | string;
   issuedAt: string;
+  txHashBlockchain?: string | null;
+  currentVersion: number;
   createdAt: string;
-  txHash?: string;
-  blockNumber?: number;
+  updatedAt?: string | null;
 }
 
 export interface BatchStatusResponse {

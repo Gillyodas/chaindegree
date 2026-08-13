@@ -113,7 +113,7 @@ export function DegreeDetailPage() {
                 {degree.degreeCode || degree.id}
               </CardTitle>
               <CardDescription>
-                Issued degree record details
+                Issued degree record details (Version {degree.currentVersion})
               </CardDescription>
             </div>
             <StatusBadge status={degree.status} />
@@ -124,10 +124,10 @@ export function DegreeDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <span className="text-xs text-muted-foreground uppercase font-semibold">
-                Student Name / ID
+                Student Full Name
               </span>
               <p className="text-sm font-medium mt-1">
-                {degree.studentName || degree.studentId}
+                {degree.studentFullName || degree.studentId}
               </p>
             </div>
 
@@ -178,17 +178,13 @@ export function DegreeDetailPage() {
             <h4 className="text-xs uppercase font-semibold text-muted-foreground mb-3">
               Blockchain Anchoring Information
             </h4>
-            {degree.txHash ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-mono bg-muted/40 p-3 rounded border">
+            {degree.txHashBlockchain ? (
+              <div className="grid grid-cols-1 gap-4 text-sm font-mono bg-muted/40 p-3 rounded border">
                 <div>
                   <span className="text-xs text-muted-foreground block">Transaction Hash</span>
-                  <span className="truncate block text-xs" title={degree.txHash}>
-                    {degree.txHash}
+                  <span className="truncate block text-xs" title={degree.txHashBlockchain}>
+                    {degree.txHashBlockchain}
                   </span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block">Block Number</span>
-                  <span className="text-xs">{degree.blockNumber ?? 'N/A'}</span>
                 </div>
               </div>
             ) : (

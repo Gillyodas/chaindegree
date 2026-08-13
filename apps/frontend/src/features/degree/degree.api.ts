@@ -5,6 +5,7 @@ import type {
   BatchStatusResponse,
   DegreeListItem,
   DegreeDetail,
+  PagedResult,
 } from './degree.types';
 
 export const degreeApi = {
@@ -35,9 +36,12 @@ export const degreeApi = {
     await httpClient.post(`/api/v1/institutions/degrees/${id}/retry`);
   },
 
-  getDegrees: async (): Promise<DegreeListItem[]> => {
-    const response = await httpClient.get<DegreeListItem[]>(
+  getDegrees: async (pageIndex = 1, pageSize = 20): Promise<PagedResult<DegreeListItem>> => {
+    const response = await httpClient.get<PagedResult<DegreeListItem>>(
       '/api/v1/institutions/degrees',
+      {
+        params: { pageIndex, pageSize },
+      },
     );
     return response.data;
   },
