@@ -47,6 +47,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence
             services.AddScoped<IReputationReadService, ReputationReadService>();
             services.AddScoped<IEvidenceStorageService, LocalFileSystemEvidenceStorageService>();
             services.AddScoped<Core.Application.Abstractions.Queries.IBatchQueryService, BatchTrackingService>();
+            services.AddScoped<Core.Application.Abstractions.Queries.IDegreeQueryService, Queries.DegreeQueryService>();
             services.AddScoped<IBlockchainService, NethereumBlockchainService>();
             services.AddSingleton<INonceManager, NonceManager>();
             services.AddSingleton<Monitoring.WorkerMetrics>();
