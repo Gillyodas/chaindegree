@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router';
-import { ArrowLeft, Edit3, ShieldOff, AlertTriangle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Edit3, ShieldOff, AlertTriangle } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { StatusBadge } from '@/shared/components/StatusBadge';

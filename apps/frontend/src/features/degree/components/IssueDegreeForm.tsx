@@ -54,7 +54,7 @@ export function IssueDegreeForm() {
           studentId: '',
           major: '',
           classification: '',
-          issuedAt: new Date().toISOString().split('T')[0],
+          issuedAt: new Date().toISOString().split('T')[0] ?? '',
         },
       ],
     },
@@ -99,7 +99,7 @@ export function IssueDegreeForm() {
                   studentId: '',
                   major: '',
                   classification: '',
-                  issuedAt: new Date().toISOString().split('T')[0],
+                  issuedAt: new Date().toISOString().split('T')[0] ?? '',
                 },
               ],
             });
@@ -264,7 +264,7 @@ export function IssueDegreeForm() {
                   studentId: '',
                   major: '',
                   classification: '',
-                  issuedAt: new Date().toISOString().split('T')[0],
+                  issuedAt: new Date().toISOString().split('T')[0] ?? '',
                 })
               }
             >
