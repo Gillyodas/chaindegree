@@ -129,6 +129,7 @@ namespace ChainDegree.Core.Domain.Degrees
                 return Result.Failure(DegreeErrors.InvalidCryptoSnapshot);
 
             Status = StatusEnum.Pending_Update;
+            CurrentVersion++;
             UpdatedAt = DateTime.UtcNow;
 
             RaiseDomainEvent(new DegreeUpdatedEvent(Id, InstitutionId, reason.Code, CryptoData.DataHashLocal, newHash));
@@ -158,7 +159,6 @@ namespace ChainDegree.Core.Domain.Degrees
             CryptoData = newCryptoData;
             TxHashBlockchain = txHash;
             Status = StatusEnum.Confirmed;
-            CurrentVersion++;
             UpdatedAt = DateTime.UtcNow;
 
             return Result.Success();
@@ -218,6 +218,7 @@ namespace ChainDegree.Core.Domain.Degrees
                 return Result.Failure(DegreeErrors.InvalidStateTransition);
 
             Status = StatusEnum.Pending_Revocation;
+            CurrentVersion++;
             UpdatedAt = DateTime.UtcNow;
 
             RaiseDomainEvent(new DegreeRevokedEvent(Id, InstitutionId, reason.Code));

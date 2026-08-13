@@ -12,7 +12,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
             builder.ToTable("BATCH_DEGREE_RECORDS");
 
             builder.HasKey(x => new { x.BatchId, x.DegreeId });
+            builder.HasIndex(x => new { x.DegreeId, x.Version }).IsUnique();
 
+            builder.Property(x => x.Version).IsRequired();
             builder.Property(x => x.LeafIndex).IsRequired();
             builder.Property(x => x.ProofHashesJson).HasColumnType("nvarchar(max)");
 

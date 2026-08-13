@@ -14,6 +14,8 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Id).ValueGeneratedNever();
 
+            builder.HasIndex(x => new { x.DegreeId, x.Version }).IsUnique();
+
             builder.Property(x => x.DegreeId).IsRequired();
             builder.Property(x => x.Version).IsRequired();
             builder.Property(x => x.PreviousHash).IsRequired().HasMaxLength(150);

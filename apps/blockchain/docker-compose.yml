@@ -26,8 +26,6 @@ services:
       - --metrics-port=9545
       - --min-gas-price=0
       - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
-    ports:
-      - "30303:30303"
     volumes:
       - besu-data-validator1:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
@@ -56,8 +54,6 @@ services:
       - --metrics-port=9545
       - --min-gas-price=0
       - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
-    ports:
-      - "30304:30303"
     volumes:
       - besu-data-validator2:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
@@ -86,8 +82,6 @@ services:
       - --metrics-port=9545
       - --min-gas-price=0
       - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
-    ports:
-      - "30305:30303"
     volumes:
       - besu-data-validator3:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
@@ -116,8 +110,6 @@ services:
       - --metrics-port=9545
       - --min-gas-price=0
       - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
-    ports:
-      - "30306:30303"
     volumes:
       - besu-data-validator4:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json
@@ -145,15 +137,12 @@ services:
       - --rpc-http-host=0.0.0.0
       - --rpc-http-port=8545
       - --rpc-http-api=ETH,NET,WEB3
-      - --rpc-http-cors-origins=*
+      - --rpc-http-cors-origins=http://backend:5000,http://localhost:5000
       - --min-gas-price=0
       - --host-allowlist=localhost,besu-validator1,besu-validator2,besu-validator3,besu-validator4,besu-rpc,backend,chaindegree-prometheus,127.0.0.1,172.28.0.11,172.28.0.12,172.28.0.13,172.28.0.14,172.28.0.15
       - --metrics-enabled=true
       - --metrics-host=0.0.0.0
       - --metrics-port=9545
-    ports:
-      - "8545:8545"
-      - "30307:30303"
     volumes:
       - besu-data-rpc:/var/lib/besu
       - ./genesis/genesis.json:/opt/besu/genesis.json

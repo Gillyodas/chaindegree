@@ -342,6 +342,25 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 };
 
                 dbContext.BatchRecords.Add(batchRecord);
+                
+                var batchDegreeRecords = new List<BatchDegreeRecord>();
+                for (int i = 0; i < institutionItems.Count; i++)
+                {
+                    var item = institutionItems[i];
+                    var proofData = treeResult.Proofs[i];
+                    var proofJson = System.Text.Json.JsonSerializer.Serialize(proofData);
+
+                    batchDegreeRecords.Add(new BatchDegreeRecord
+                    {
+                        BatchId = batchId,
+                        DegreeId = item.Degree.Id,
+                        Version = item.Degree.CurrentVersion,
+                        LeafIndex = proofData.LeafIndex,
+                        ProofHashesJson = proofJson
+                    });
+                }
+                dbContext.BatchDegreeRecords.AddRange(batchDegreeRecords);
+
                 await dbContext.SaveChangesAsync(ct);
 
                 var actionType = institutionItems.First().Record.ActionType;

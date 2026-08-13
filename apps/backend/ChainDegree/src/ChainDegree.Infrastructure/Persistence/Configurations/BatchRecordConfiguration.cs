@@ -21,6 +21,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Configurations
             builder.Property(x => x.DegreeCount).IsRequired();
 
             builder.Property(x => x.MerkleRoot).HasMaxLength(128);
+            builder.HasIndex(x => x.MerkleRoot).IsUnique().HasFilter("[MerkleRoot] IS NOT NULL");
             builder.Property(x => x.TxHash).HasMaxLength(66);
             builder.Property(x => x.BlockNumber);
             builder.Property(x => x.EstimatedWaitTimeSeconds).IsRequired();

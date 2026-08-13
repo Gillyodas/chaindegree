@@ -6,6 +6,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Entities
     {
         public Guid BatchId { get; set; }
         public Guid DegreeId { get; set; }
+        public int Version { get; set; }
         public int LeafIndex { get; set; }
         public string? ProofHashesJson { get; set; }
     }
