@@ -6,6 +6,10 @@ import type {
   DegreeListItem,
   DegreeDetail,
   PagedResult,
+  UpdateDegreeRequest,
+  UpdateDegreeResponse,
+  RevokeDegreeRequest,
+  RevokeDegreeResponse,
 } from './degree.types';
 
 export const degreeApi = {
@@ -49,6 +53,40 @@ export const degreeApi = {
   getDegree: async (id: string): Promise<DegreeDetail> => {
     const response = await httpClient.get<DegreeDetail>(
       `/api/v1/institutions/degrees/${id}`,
+    );
+    return response.data;
+  },
+
+  updateDegree: async (
+    id: string,
+    data: UpdateDegreeRequest,
+    idempotencyKey: string,
+  ): Promise<UpdateDegreeResponse> => {
+    const response = await httpClient.put<UpdateDegreeResponse>(
+      `/api/v1/institutions/degrees/${id}`,
+      data,
+      {
+        headers: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      },
+    );
+    return response.data;
+  },
+
+  revokeDegree: async (
+    id: string,
+    data: RevokeDegreeRequest,
+    idempotencyKey: string,
+  ): Promise<RevokeDegreeResponse> => {
+    const response = await httpClient.post<RevokeDegreeResponse>(
+      `/api/v1/institutions/degrees/${id}/revoke`,
+      data,
+      {
+        headers: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      },
     );
     return response.data;
   },
