@@ -124,5 +124,48 @@ namespace ChainDegree.Application.Tests.Degrees
             _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
+
+        [Fact]
+        public async Task Handle_WhenAlreadyRevoked_ReturnsInvalidStateTransitionError()
+        {
+            // Arrange
+            var institutionId = Guid.NewGuid();
+            var registrarId = Guid.NewGuid();
+            var degree = Degree.Create(0, institutionId, registrarId, Guid.NewGuid(), "IT", "Giỏi", _fakeCrypto).Value;
+            degree.RevokeShortcut(DegreeActionReason.FromCode("R-01"));
+
+            _mockUserAccessor.Setup(u => u.InstitutionId).Returns(institutionId);
+            _mockRepo.Setup(r => r.GetByIdAsync(degree.Id, It.IsAny<CancellationToken>())).ReturnsAsync(degree);
+
+            var command = new UpdateDegreeCommand(degree.Id, "AI", "Xuất sắc", "S-01");
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            Assert.True(result.IsFailure);
+            Assert.Equal(DegreeErrors.InvalidStateTransition, result.Error);
+        }
+
+        [Fact]
+        public async Task Handle_WithInstitutionMismatch_ReturnsInstitutionMismatchError()
+        {
+            // Arrange
+            var institutionId = Guid.NewGuid();
+            var registrarId = Guid.NewGuid();
+            var degree = Degree.Create(0, Guid.NewGuid(), registrarId, Guid.NewGuid(), "IT", "Giỏi", _fakeCrypto).Value;
+
+            _mockUserAccessor.Setup(u => u.InstitutionId).Returns(institutionId);
+            _mockRepo.Setup(r => r.GetByIdAsync(degree.Id, It.IsAny<CancellationToken>())).ReturnsAsync(degree);
+
+            var command = new UpdateDegreeCommand(degree.Id, "AI", "Xuất sắc", "S-01");
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            Assert.True(result.IsFailure);
+            Assert.Equal(DegreeErrors.InstitutionMismatch, result.Error);
+        }
     }
 }

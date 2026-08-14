@@ -150,6 +150,7 @@ namespace ChainDegree.API.Controllers
 
         [HttpPost("{id:guid}/revoke")]
         [Authorize(Policy = Roles.Registrar)]
+        [ServiceFilter(typeof(IdempotencyFilterAttribute))]
         [EnableRateLimiting(RateLimitPolicies.Degrees.Revoke)]
         [ProducesResponseType(typeof(RevokeDegreeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(RevokeDegreeResponse), StatusCodes.Status202Accepted)]
@@ -157,6 +158,7 @@ namespace ChainDegree.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> RevokeDegree(
             Guid id,
             [FromBody] RevokeDegreeRequest request,
@@ -180,6 +182,7 @@ namespace ChainDegree.API.Controllers
 
         [HttpPut("{id:guid}")]
         [Authorize(Policy = Roles.Registrar)]
+        [ServiceFilter(typeof(IdempotencyFilterAttribute))]
         [EnableRateLimiting(RateLimitPolicies.Degrees.Update)]
         [ProducesResponseType(typeof(UpdateDegreeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(UpdateDegreeResponse), StatusCodes.Status202Accepted)]
@@ -187,6 +190,7 @@ namespace ChainDegree.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> UpdateDegree(
             Guid id,
             [FromBody] UpdateDegreeRequest request,

@@ -26,7 +26,7 @@ namespace ChainDegree.SharedKernel.DomainErrors.Degrees.Degree
             Error.Validation("Degree.EmptyTransactionHash", "Blockchain transaction hash cannot be empty.");
 
         public static readonly Error InvalidStateTransition =
-            Error.Validation("Degree.InvalidStateTransition", "The degree cannot transition from its current state under this operation.");
+            Error.Conflict("Degree.InvalidStateTransition", "The degree cannot transition from its current state under this operation.");
 
         public static readonly Error DuplicateDegree =
             Error.Conflict("Degree.DuplicateDegree", "A degree of the same type already exists for this student at this institution.");
