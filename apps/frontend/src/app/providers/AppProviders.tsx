@@ -7,12 +7,12 @@ import { Toaster } from '@/shared/components/ui/sonner';
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider defaultTheme="system">
-      <AuthProvider>
-        <QueryProvider>
+      <QueryProvider>
+        <AuthProvider>
           {children}
           <Toaster position="top-right" richColors />
-        </QueryProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </QueryProvider>
     </ThemeProvider>
   );
 }

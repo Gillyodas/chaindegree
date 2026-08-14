@@ -20,4 +20,14 @@ describe('StatusBadge', () => {
       expect(screen.getByText(expectedLabel)).toBeInTheDocument();
     });
   });
+
+  it('should render fallback label for unknown status string without crashing', () => {
+    render(<StatusBadge status="UNEXPECTED_NEW_STATUS" />);
+    expect(screen.getByText('UNEXPECTED_NEW_STATUS')).toBeInTheDocument();
+  });
+
+  it('should render Unknown for empty status', () => {
+    render(<StatusBadge status="" />);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+  });
 });

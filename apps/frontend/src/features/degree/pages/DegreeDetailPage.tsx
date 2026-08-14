@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { ArrowLeft, Edit3, ShieldOff, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { StatusBadge } from '@/shared/components/StatusBadge';
@@ -8,10 +11,15 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
 import { HttpError } from '@/shared/api/http';
 import { useDegreeDetailQuery } from '../hooks/useDegreeQueries';
+import { UpdateDegreeModal } from '../components/UpdateDegreeModal';
+import { RevokeDegreeDialog } from '../components/RevokeDegreeDialog';
 
 export function DegreeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: degree, isLoading, error, refetch } = useDegreeDetailQuery(id || '');
+
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+  const [isRevokeOpen, setIsRevokeOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -58,6 +66,25 @@ export function DegreeDetailPage() {
     );
   }
 
+  // State Transition UX Hints: Only Confirmed or Pending_Confirmation allow Update/Revoke
+  const canUpdateOrRevoke =
+    degree.status === 'Confirmed' || degree.status === 'Pending_Confirmation';
+
+  const handleUpdateSuccess = (msg: string) => {
+    toast.success(msg);
+    refetch();
+  };
+
+  const handleRevokeSuccess = (msg: string) => {
+    toast.success(msg);
+    refetch();
+  };
+
+  const handleConflict = () => {
+    toast.error('The degree state has changed. Please refresh and try again.');
+    refetch();
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
@@ -68,28 +95,36 @@ export function DegreeDetailPage() {
           </Button>
         </Link>
 
-        {/* Action placeholders for future phases */}
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
-            disabled
-            title="Available in Phase 2"
-            className="opacity-60 cursor-not-allowed"
+            disabled={!canUpdateOrRevoke}
+            onClick={() => setIsUpdateOpen(true)}
+            title={
+              canUpdateOrRevoke
+                ? 'Update Degree Academic Details'
+                : 'Degree status does not permit update'
+            }
           >
             <Edit3 className="h-4 w-4 mr-1.5" />
-            Update (Phase 2)
+            Update
           </Button>
 
           <Button
             variant="outline"
             size="sm"
-            disabled
-            title="Available in Phase 2"
-            className="opacity-60 cursor-not-allowed text-destructive border-destructive/30"
+            disabled={!canUpdateOrRevoke}
+            onClick={() => setIsRevokeOpen(true)}
+            title={
+              canUpdateOrRevoke
+                ? 'Revoke Degree'
+                : 'Degree status does not permit revocation'
+            }
+            className="text-destructive border-destructive/30 hover:bg-destructive/10"
           >
             <ShieldOff className="h-4 w-4 mr-1.5" />
-            Revoke (Phase 2)
+            Revoke
           </Button>
 
           <Button
@@ -173,7 +208,6 @@ export function DegreeDetailPage() {
             </div>
           </div>
 
-          {/* Blockchain information section */}
           <div className="border-t pt-4 mt-6">
             <h4 className="text-xs uppercase font-semibold text-muted-foreground mb-3">
               Blockchain Anchoring Information
@@ -195,6 +229,23 @@ export function DegreeDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <UpdateDegreeModal
+        isOpen={isUpdateOpen}
+        onClose={() => setIsUpdateOpen(false)}
+        degree={degree}
+        onSuccess={handleUpdateSuccess}
+        onConflict={handleConflict}
+      />
+
+      <RevokeDegreeDialog
+        isOpen={isRevokeOpen}
+        onClose={() => setIsRevokeOpen(false)}
+        degree={degree}
+        onSuccess={handleRevokeSuccess}
+        onConflict={handleConflict}
+      />
     </div>
   );
 }

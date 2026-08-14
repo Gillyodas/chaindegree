@@ -63,13 +63,19 @@ export function AppRouter() {
                   element={<DegreeComingSoonPage title="ChainDegree Overview Dashboard" />}
                 />
 
-                {/* Degree Routes */}
-                <Route path="/degrees" element={<DegreeListPage />} />
-                <Route path="/degrees/:id" element={<DegreeDetailPage />} />
-
-                {/* Issue Degree Route (Registrar Only) */}
+                {/* Degree Management Routes (Registrar Only) */}
                 <Route element={<ProtectedRoute allowedRoles={['Registrar']} />}>
+                  <Route path="/degrees" element={<DegreeListPage />} />
+                  <Route path="/degrees/:id" element={<DegreeDetailPage />} />
                   <Route path="/degrees/issue" element={<IssueDegreeForm />} />
+                </Route>
+
+                {/* Student Degree Route (Student Only) */}
+                <Route element={<ProtectedRoute allowedRoles={['Student']} />}>
+                  <Route
+                    path="/my-degrees"
+                    element={<DegreeComingSoonPage title="My Degrees (Student View)" />}
+                  />
                 </Route>
 
                 {/* Admin Report Review Route (Admin Only) */}

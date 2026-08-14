@@ -54,7 +54,7 @@ const navItems: NavItem[] = [
   },
   {
     label: 'My Degrees',
-    to: '/degrees',
+    to: '/my-degrees',
     icon: FileCheck,
     roles: ['Student'],
   },

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import type { UserRole } from '@/shared/types/api.types';
 import type { AuthContextType, MockUser } from '@/features/auth/types/auth.types';
 
@@ -34,18 +35,28 @@ const mockUsers: Record<UserRole, MockUser> = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  let queryClient: ReturnType<typeof useQueryClient> | null = null;
+  try {
+    queryClient = useQueryClient();
+  } catch {
+    queryClient = null;
+  }
+
   // Default to Registrar for dev convenience
   const [currentUser, setCurrentUser] = useState<MockUser | null>(mockUsers.Registrar);
 
   const login = (role: UserRole) => {
+    queryClient?.clear();
     setCurrentUser(mockUsers[role]);
   };
 
   const logout = () => {
+    queryClient?.clear();
     setCurrentUser(null);
   };
 
   const switchRole = (role: UserRole) => {
+    queryClient?.clear();
     setCurrentUser(mockUsers[role]);
   };
 
