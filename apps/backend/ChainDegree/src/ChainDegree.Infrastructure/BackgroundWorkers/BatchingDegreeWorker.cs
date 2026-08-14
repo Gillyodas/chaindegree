@@ -520,18 +520,19 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 
                     if (record.ActionType == "Update")
                     {
-                        var staging = await dbContext.DegreeUpdateRequests.FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+                        var staging = await dbContext.DegreeUpdateRequests.AsNoTracking().FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
                         if (staging != null)
                         {
-                            var oldProofRecord = await dbContext.BatchDegreeRecords.FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+                            var oldProofRecord = await dbContext.BatchDegreeRecords.AsNoTracking().FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
                             var previousVersion = DegreeVersion.Create(
                                 degree.Id, degree.CurrentVersion, degree.CryptoData.DataHashLocal, staging.CryptoData.DataHashLocal,
                                 degree.TxHashBlockchain ?? batchRecord.TxHash ?? "", degree.UpdatedAt, degree.CryptoData.PlainDataJson,
                                 degree.CryptoData.Salt, degree.Major, degree.Classification, oldProofRecord?.ProofHashesJson);
 
-                            dbContext.DegreeVersions.Add(previousVersion);
-                            degree.ConfirmUpdate(staging.Major, staging.Classification, staging.CryptoData, batchRecord.TxHash ?? "");
-                            dbContext.DegreeUpdateRequests.Remove(staging);
+                            var newCryptoData = ChainDegree.Core.Domain.Degrees.ValueObjects.CryptoSnapshot.Reconstruct(
+                                staging.CryptoData.PlainDataJson, staging.CryptoData.Salt, staging.CryptoData.DataHashLocal);
+                            degree.ConfirmUpdate(staging.Major, staging.Classification, newCryptoData, batchRecord.TxHash ?? "");
+                            await dbContext.DegreeUpdateRequests.Where(x => x.Id == staging.Id).ExecuteDeleteAsync(ct);
                         }
                     }
                     else if (record.ActionType == "Revoke")
@@ -582,18 +583,19 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 
                     if (record.ActionType == "Update")
                     {
-                        var staging = await dbContext.DegreeUpdateRequests.FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+                        var staging = await dbContext.DegreeUpdateRequests.AsNoTracking().FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
                         if (staging != null)
                         {
-                            var oldProofRecord = await dbContext.BatchDegreeRecords.FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+                            var oldProofRecord = await dbContext.BatchDegreeRecords.AsNoTracking().FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
                             var previousVersion = DegreeVersion.Create(
                                 degree.Id, degree.CurrentVersion, degree.CryptoData.DataHashLocal, staging.CryptoData.DataHashLocal,
                                 degree.TxHashBlockchain ?? batchRecord.TxHash ?? "", degree.UpdatedAt, degree.CryptoData.PlainDataJson,
                                 degree.CryptoData.Salt, degree.Major, degree.Classification, oldProofRecord?.ProofHashesJson);
 
-                            dbContext.DegreeVersions.Add(previousVersion);
-                            degree.ConfirmUpdate(staging.Major, staging.Classification, staging.CryptoData, batchRecord.TxHash ?? "");
-                            dbContext.DegreeUpdateRequests.Remove(staging);
+                            var newCryptoData = ChainDegree.Core.Domain.Degrees.ValueObjects.CryptoSnapshot.Reconstruct(
+                                staging.CryptoData.PlainDataJson, staging.CryptoData.Salt, staging.CryptoData.DataHashLocal);
+                            degree.ConfirmUpdate(staging.Major, staging.Classification, newCryptoData, batchRecord.TxHash ?? "");
+                            await dbContext.DegreeUpdateRequests.Where(x => x.Id == staging.Id).ExecuteDeleteAsync(ct);
                         }
                     }
                     else if (record.ActionType == "Revoke")

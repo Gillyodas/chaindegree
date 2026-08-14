@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using ChainDegree.Core.Domain.Degrees.Interfaces;
@@ -39,6 +39,11 @@ namespace ChainDegree.Core.Domain.Degrees.ValueObjects
             var cryptoSnapshot = new CryptoSnapshot(plainDataJson, salt, dataHashLocal);
 
             return Result<CryptoSnapshot>.Success(cryptoSnapshot);
+        }
+
+        public static CryptoSnapshot Reconstruct(string plainDataJson, string salt, string dataHashLocal)
+        {
+            return new CryptoSnapshot(plainDataJson, salt, dataHashLocal);
         }
 
         public Result VerifyLocal(string calculatedHash)
