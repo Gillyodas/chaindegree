@@ -74,7 +74,7 @@ namespace ChainDegree.Application.Tests.Degrees
             Assert.Equal(StatusEnum.Revoked.ToString(), result.Value.Status);
             Assert.True(result.Value.IsShortcut);
 
-            _mockBehaviorLog.Verify(b => b.LogAsync(ActionTypeEnum.ALTER_DEGREE, "DEGREES", degree.Id, null, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockBehaviorLog.Verify(b => b.LogAsync(ActionTypeEnum.ALTER_DEGREE, "DEGREES", degree.Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -101,7 +101,7 @@ namespace ChainDegree.Application.Tests.Degrees
             Assert.Equal(StatusEnum.Pending_Revocation.ToString(), result.Value.Status);
             Assert.False(result.Value.IsShortcut);
 
-            _mockBehaviorLog.Verify(b => b.LogAsync(ActionTypeEnum.ALTER_DEGREE, "DEGREES", degree.Id, null, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockBehaviorLog.Verify(b => b.LogAsync(ActionTypeEnum.ALTER_DEGREE, "DEGREES", degree.Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         }

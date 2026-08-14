@@ -100,6 +100,18 @@ namespace ChainDegree.Core.Application.Degrees.Commands.UpdateDegree
                 return Result<UpdateDegreeResponse>.Failure(DegreeErrors.InvalidCryptoSnapshot);
             }
 
+            // Capture state BEFORE modification for audit log
+            var oldValuesJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                degree.Id,
+                degree.DegreeCode,
+                Status = degree.Status.ToString(),
+                Major = degree.Major,
+                Classification = degree.Classification,
+                Hash = degree.CryptoData.DataHashLocal,
+                Version = degree.CurrentVersion
+            });
+
             await using var transaction = await _unitOfWork.BeginTransactionAsync(ct);
             try
             {
@@ -139,21 +151,24 @@ namespace ChainDegree.Core.Application.Degrees.Commands.UpdateDegree
                 }
 
                 // Audit log
-                var serializedLog = System.Text.Json.JsonSerializer.Serialize(new
+                var newValuesJson = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     degree.Id,
                     degree.DegreeCode,
-                    degree.Status,
+                    Status = degree.Status.ToString(),
+                    Major = request.Major,
+                    Classification = request.Classification,
+                    Hash = cryptoSnapshot.DataHashLocal,
                     Reason = reason.Code,
-                    NewHash = cryptoSnapshot.DataHashLocal
+                    IsShortcut = isShortcut
                 });
 
                 await _behaviorLogService.LogAsync(
                     ActionTypeEnum.ALTER_DEGREE,
                     "DEGREES",
                     degree.Id,
-                    oldValuesJson: null,
-                    newValuesJson: serializedLog,
+                    oldValuesJson: oldValuesJson,
+                    newValuesJson: newValuesJson,
                     ct);
 
                 await _unitOfWork.CommitAsync(ct);

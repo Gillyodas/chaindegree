@@ -71,6 +71,18 @@ namespace ChainDegree.Core.Application.Degrees.Commands.RevokeDegree
                 isShortcut,
                 reason.Code);
 
+            // Capture state BEFORE modification for audit log
+            var oldValuesJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                degree.Id,
+                degree.DegreeCode,
+                Status = degree.Status.ToString(),
+                Major = degree.Major,
+                Classification = degree.Classification,
+                Hash = degree.CryptoData.DataHashLocal,
+                Version = degree.CurrentVersion
+            });
+
             await using var transaction = await _unitOfWork.BeginTransactionAsync(ct);
             try
             {
@@ -91,20 +103,21 @@ namespace ChainDegree.Core.Application.Degrees.Commands.RevokeDegree
                 }
 
                 // Audit log
-                var serializedLog = System.Text.Json.JsonSerializer.Serialize(new
+                var newValuesJson = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     degree.Id,
                     degree.DegreeCode,
-                    degree.Status,
-                    Reason = reason.Code
+                    Status = degree.Status.ToString(),
+                    Reason = reason.Code,
+                    IsShortcut = isShortcut
                 });
 
                 await _behaviorLogService.LogAsync(
                     ActionTypeEnum.ALTER_DEGREE,
                     "DEGREES",
                     degree.Id,
-                    oldValuesJson: null,
-                    newValuesJson: serializedLog,
+                    oldValuesJson: oldValuesJson,
+                    newValuesJson: newValuesJson,
                     ct);
 
                 await _unitOfWork.CommitAsync(ct);

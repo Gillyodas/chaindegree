@@ -89,7 +89,7 @@ namespace ChainDegree.Application.Tests.Degrees
             Assert.Equal("Artificial Intelligence", degree.Major);
             Assert.Equal("Xuất sắc", degree.Classification);
 
-            _mockBehaviorLog.Verify(b => b.LogAsync(ActionTypeEnum.ALTER_DEGREE, "DEGREES", degree.Id, null, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockBehaviorLog.Verify(b => b.LogAsync(ActionTypeEnum.ALTER_DEGREE, "DEGREES", degree.Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -120,7 +120,7 @@ namespace ChainDegree.Application.Tests.Degrees
             Assert.Equal("IT", degree.Major); // should not overwrite original data yet
 
             _mockRepo.Verify(r => r.AddUpdateRequestAsync(It.IsAny<DegreeUpdateRequest>(), It.IsAny<CancellationToken>()), Times.Once);
-            _mockBehaviorLog.Verify(b => b.LogAsync(ActionTypeEnum.ALTER_DEGREE, "DEGREES", degree.Id, null, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+            _mockBehaviorLog.Verify(b => b.LogAsync(ActionTypeEnum.ALTER_DEGREE, "DEGREES", degree.Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
             _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
