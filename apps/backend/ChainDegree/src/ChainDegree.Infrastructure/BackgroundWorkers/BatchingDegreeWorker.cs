@@ -525,7 +525,7 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                         {
                             var oldProofRecord = await dbContext.BatchDegreeRecords.AsNoTracking().FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
                             var previousVersion = DegreeVersion.Create(
-                                degree.Id, degree.CurrentVersion, degree.CryptoData.DataHashLocal, staging.CryptoData.DataHashLocal,
+                                degree.Id, degree.CurrentVersion - 1, degree.CryptoData.DataHashLocal, staging.CryptoData.DataHashLocal,
                                 degree.TxHashBlockchain ?? batchRecord.TxHash ?? "", degree.UpdatedAt, degree.CryptoData.PlainDataJson,
                                 degree.CryptoData.Salt, degree.Major, degree.Classification, oldProofRecord?.ProofHashesJson);
 
@@ -590,7 +590,7 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                         {
                             var oldProofRecord = await dbContext.BatchDegreeRecords.AsNoTracking().FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
                             var previousVersion = DegreeVersion.Create(
-                                degree.Id, degree.CurrentVersion, degree.CryptoData.DataHashLocal, staging.CryptoData.DataHashLocal,
+                                degree.Id, degree.CurrentVersion - 1, degree.CryptoData.DataHashLocal, staging.CryptoData.DataHashLocal,
                                 degree.TxHashBlockchain ?? batchRecord.TxHash ?? "", degree.UpdatedAt, degree.CryptoData.PlainDataJson,
                                 degree.CryptoData.Salt, degree.Major, degree.Classification, oldProofRecord?.ProofHashesJson);
 
