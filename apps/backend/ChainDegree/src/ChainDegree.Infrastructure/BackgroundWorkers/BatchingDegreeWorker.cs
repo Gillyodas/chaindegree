@@ -529,6 +529,8 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                                 degree.TxHashBlockchain ?? batchRecord.TxHash ?? "", degree.UpdatedAt, degree.CryptoData.PlainDataJson,
                                 degree.CryptoData.Salt, degree.Major, degree.Classification, oldProofRecord?.ProofHashesJson);
 
+                            dbContext.DegreeVersions.Add(previousVersion);
+
                             var newCryptoData = ChainDegree.Core.Domain.Degrees.ValueObjects.CryptoSnapshot.Reconstruct(
                                 staging.CryptoData.PlainDataJson, staging.CryptoData.Salt, staging.CryptoData.DataHashLocal);
                             degree.ConfirmUpdate(staging.Major, staging.Classification, newCryptoData, batchRecord.TxHash ?? "");
@@ -591,6 +593,8 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                                 degree.Id, degree.CurrentVersion, degree.CryptoData.DataHashLocal, staging.CryptoData.DataHashLocal,
                                 degree.TxHashBlockchain ?? batchRecord.TxHash ?? "", degree.UpdatedAt, degree.CryptoData.PlainDataJson,
                                 degree.CryptoData.Salt, degree.Major, degree.Classification, oldProofRecord?.ProofHashesJson);
+
+                            dbContext.DegreeVersions.Add(previousVersion);
 
                             var newCryptoData = ChainDegree.Core.Domain.Degrees.ValueObjects.CryptoSnapshot.Reconstruct(
                                 staging.CryptoData.PlainDataJson, staging.CryptoData.Salt, staging.CryptoData.DataHashLocal);
