@@ -250,7 +250,8 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
             var degreesToProcess = await dbContext.Degrees.Where(d => availableDegreeIds.Contains(d.Id)).ToListAsync(ct);
             var oldestDegree = degreesToProcess.Min(d => d.CreatedAt);
             var waitTimeSeconds = (now - oldestDegree).TotalSeconds;
-            var isTriggered = degreesToProcess.Count >= _options.MaxBatchSize || waitTimeSeconds >= _options.MaxWaitTimeSeconds;
+            var hasImmediateRevocation = _options.ImmediateRevocationTrigger && degreesToProcess.Any(d => d.Status == StatusEnum.Pending_Revocation);
+            var isTriggered = hasImmediateRevocation || degreesToProcess.Count >= _options.MaxBatchSize || waitTimeSeconds >= _options.MaxWaitTimeSeconds;
 
             if (!isTriggered)
             {
@@ -299,11 +300,12 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 
             if (claimedDegrees.Count == 0) return;
 
-            var groups = claimedDegrees.GroupBy(x => x.Degree.InstitutionId).ToList();
+            var groups = claimedDegrees.GroupBy(x => new { x.Degree.InstitutionId, x.Record.ActionType }).ToList();
 
             foreach (var group in groups)
             {
-                var institutionId = group.Key;
+                var institutionId = group.Key.InstitutionId;
+                var actionType = group.Key.ActionType;
                 var institutionItems = group.ToList();
                 var institutionDegrees = institutionItems.Select(x => x.Degree).ToList();
 
@@ -311,14 +313,14 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                 var instCode = institution?.Code ?? "UNKNOWN";
                 var batchId = Guid.NewGuid();
                 var shortGuid = Guid.NewGuid().ToString("N").Substring(0, 8);
-                var batchName = $"BATCH_{instCode.ToUpperInvariant()}_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{shortGuid}";
+                var batchName = $"BATCH_{instCode.ToUpperInvariant()}_{actionType.ToUpperInvariant()}_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{shortGuid}";
 
                 var leafHashes = new List<string>();
                 foreach (var item in institutionItems)
                 {
                     if (item.Record.ActionType == "Update")
                     {
-                        var staging = await dbContext.DegreeUpdateRequests.FirstOrDefaultAsync(x => x.DegreeId == item.Degree.Id, ct);
+                        var staging = await dbContext.DegreeUpdateRequests.AsNoTracking().FirstOrDefaultAsync(x => x.DegreeId == item.Degree.Id, ct);
                         leafHashes.Add(staging?.CryptoData.DataHashLocal ?? item.Degree.CryptoData.DataHashLocal);
                     }
                     else
@@ -363,7 +365,6 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
 
                 await dbContext.SaveChangesAsync(ct);
 
-                var actionType = institutionItems.First().Record.ActionType;
                 var job = new BatchJobContext(
                     batchId,
                     institutionId,

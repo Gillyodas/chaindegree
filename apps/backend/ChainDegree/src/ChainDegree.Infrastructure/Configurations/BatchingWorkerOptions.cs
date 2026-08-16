@@ -7,6 +7,7 @@ namespace ChainDegree.Core.Infrastructure.Configurations
         public const string SectionName = "Worker:Batching";
         public int MaxBatchSize { get; set; } = 500;
         public int MaxWaitTimeSeconds { get; set; } = 180;
+        public bool ImmediateRevocationTrigger { get; set; } = true;
         public int PollingIntervalSeconds { get; set; } = 10;
         public int ConsumerCount { get; set; } = 4;
         public int ChannelCapacity { get; set; } = 100;
