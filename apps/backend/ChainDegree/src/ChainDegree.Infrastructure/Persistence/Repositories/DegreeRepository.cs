@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ChainDegree.Core.Application.Abstractions.Crypto;
 using ChainDegree.Core.Application.Abstractions.Repositories;
 using ChainDegree.Core.Application.Degrees.Queries.ListDegreeVersions;
 using ChainDegree.Core.Domain.Degrees;
@@ -174,6 +175,16 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
 
             try
             {
+                var trimmed = batchRecord.ProofHashesJson.TrimStart();
+                if (trimmed.StartsWith("{"))
+                {
+                    var proofObj = System.Text.Json.JsonSerializer.Deserialize<MerkleProofData>(batchRecord.ProofHashesJson);
+                    if (proofObj != null)
+                    {
+                        return batchRecord.ProofHashesJson;
+                    }
+                }
+
                 var hashes = System.Text.Json.JsonSerializer.Deserialize<List<string>>(batchRecord.ProofHashesJson);
                 if (hashes == null) return null;
 
@@ -186,13 +197,12 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                     currentIndex /= 2;
                 }
 
-                var proofData = new
-                {
-                    LeafIndex = batchRecord.LeafIndex,
-                    LeafHash = leafHash,
-                    ProofHashes = hashes,
-                    ProofDirections = directions
-                };
+                var proofData = new MerkleProofData(
+                    batchRecord.LeafIndex,
+                    leafHash,
+                    hashes,
+                    directions
+                );
 
                 return System.Text.Json.JsonSerializer.Serialize(proofData);
             }
