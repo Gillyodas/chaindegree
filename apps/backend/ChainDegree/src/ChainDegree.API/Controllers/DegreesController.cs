@@ -13,6 +13,7 @@ using ChainDegree.Core.Application.Degrees.Queries.GetBatchStatus;
 using ChainDegree.Core.Application.Degrees.Commands.UpdateDegree;
 using ChainDegree.Core.Application.Degrees.Commands.RevokeDegree;
 using ChainDegree.Core.Application.Degrees.Queries.VerifyDegree;
+using ChainDegree.Core.Application.Degrees.Queries.ListDegreeVersions;
 using ChainDegree.Core.Application.Degrees.Queries.DTOs;
 using ChainDegree.Core.Application.Degrees.Queries.GetDegrees;
 using ChainDegree.Core.Application.Degrees.Queries.GetDegreeById;
@@ -248,6 +249,31 @@ namespace ChainDegree.API.Controllers
                 if (result.Error == DegreeErrors.UnsupportedVersion)
                 {
                     return NotFound(new VerifyDegreeErrorResponse(false, "UNSUPPORTED_VERSION", "The specified version does not exist for this degree."));
+                }
+
+                return HandleFailure(result);
+            }
+
+            return Ok(result.Value);
+        }
+
+        [HttpGet("{degreeCode}/versions")]
+        [AllowAnonymous]
+        [EnableRateLimiting(RateLimitPolicies.Degrees.Verify)]
+        [ProducesResponseType(typeof(DegreeVersionListResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(VerifyDegreeErrorResponse), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ListDegreeVersions(
+            string degreeCode,
+            CancellationToken ct)
+        {
+            var query = new ListDegreeVersionsQuery(degreeCode);
+            var result = await _sender.Send(query, ct);
+
+            if (result.IsFailure)
+            {
+                if (result.Error == DegreeErrors.NotFound)
+                {
+                    return NotFound(new VerifyDegreeErrorResponse(false, "DEGREE_NOT_FOUND", "No degree found with the specified code."));
                 }
 
                 return HandleFailure(result);

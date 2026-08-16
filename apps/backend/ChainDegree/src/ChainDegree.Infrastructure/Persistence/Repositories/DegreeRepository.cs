@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ChainDegree.Core.Application.Abstractions.Repositories;
+using ChainDegree.Core.Application.Degrees.Queries.ListDegreeVersions;
 using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Degrees.Entities;
 using ChainDegree.Core.Domain.Degrees.Enums;
@@ -199,6 +200,65 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
             {
                 return null;
             }
+        }
+
+        public async Task<DegreeVersionListResponse?> GetDegreeVersionsAsync(string degreeCode, CancellationToken ct = default)
+        {
+            var degree = await _context.Degrees
+                .AsNoTracking()
+                .Where(d => d.DegreeCode == degreeCode)
+                .Select(d => new
+                {
+                    d.Id,
+                    d.DegreeCode,
+                    d.CurrentVersion,
+                    d.IssuedAt,
+                    d.UpdatedAt
+                })
+                .FirstOrDefaultAsync(ct);
+
+            if (degree == null)
+            {
+                return null;
+            }
+
+            var historicalVersions = await _context.DegreeVersions
+                .AsNoTracking()
+                .Where(v => v.DegreeId == degree.Id)
+                .OrderByDescending(v => v.Version)
+                .Select(v => new DegreeVersionItem(
+                    v.Version,
+                    v.EffectiveAt,
+                    false))
+                .ToListAsync(ct);
+
+            var list = new List<DegreeVersionItem>();
+
+            // Add current version
+            var currentEffectiveAt = degree.UpdatedAt != default(DateTime) ? degree.UpdatedAt : degree.IssuedAt;
+            list.Add(new DegreeVersionItem(degree.CurrentVersion, currentEffectiveAt, true));
+
+            // Add historical versions
+            foreach (var hist in historicalVersions)
+            {
+                if (hist.Version < degree.CurrentVersion && !list.Any(x => x.Version == hist.Version))
+                {
+                    list.Add(hist);
+                }
+            }
+
+            // Ensure all versions 1..CurrentVersion are accounted for
+            for (int v = degree.CurrentVersion - 1; v >= 1; v--)
+            {
+                if (!list.Any(x => x.Version == v))
+                {
+                    list.Add(new DegreeVersionItem(v, degree.IssuedAt, false));
+                }
+            }
+
+            var sorted = list.OrderByDescending(x => x.Version).ToList();
+
+            return new DegreeVersionListResponse(degree.DegreeCode, degree.CurrentVersion, sorted);
         }
 
         public async Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, CancellationToken ct = default)

@@ -13,6 +13,7 @@ using ChainDegree.Core.Application.Degrees.Queries.DTOs;
 using ChainDegree.Core.Application.Degrees.Queries.GetDegrees;
 using ChainDegree.Core.Application.Degrees.Queries.GetDegreeById;
 using ChainDegree.Core.Application.Degrees.Queries.VerifyDegree;
+using ChainDegree.Core.Application.Degrees.Queries.ListDegreeVersions;
 using ChainDegree.SharedKernel.DomainErrors.Degrees.Degree;
 using ChainDegree.Core.Application.Abstractions.Queries;
 using ChainDegree.SharedKernel.Result;
@@ -390,6 +391,52 @@ namespace ChainDegree.API.Tests.Controllers
             var err = Assert.IsType<VerifyDegreeErrorResponse>(badRequestResult.Value);
             Assert.False(err.Verified);
             Assert.Equal("INVALID_SALT_FORMAT", err.ErrorCode);
+        }
+
+        [Fact]
+        public async Task ListDegreeVersions_DegreeNotFound_ReturnsNotFound()
+        {
+            // Arrange
+            var degreeCode = "DEG-2026-999999";
+            _mockSender.Setup(s => s.Send(It.Is<ListDegreeVersionsQuery>(q => q.DegreeCode == degreeCode), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<DegreeVersionListResponse>.Failure(DegreeErrors.NotFound));
+
+            // Act
+            var result = await _controller.ListDegreeVersions(degreeCode, CancellationToken.None);
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
+            var err = Assert.IsType<VerifyDegreeErrorResponse>(notFoundResult.Value);
+            Assert.False(err.Verified);
+            Assert.Equal("DEGREE_NOT_FOUND", err.ErrorCode);
+        }
+
+        [Fact]
+        public async Task ListDegreeVersions_DegreeFound_ReturnsOkWithVersions()
+        {
+            // Arrange
+            var degreeCode = "DEG-2026-000001";
+            var expectedResponse = new DegreeVersionListResponse(
+                degreeCode,
+                2,
+                new List<DegreeVersionItem>
+                {
+                    new DegreeVersionItem(2, DateTime.UtcNow, true),
+                    new DegreeVersionItem(1, DateTime.UtcNow.AddMonths(-1), false)
+                });
+
+            _mockSender.Setup(s => s.Send(It.Is<ListDegreeVersionsQuery>(q => q.DegreeCode == degreeCode), It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(Result<DegreeVersionListResponse>.Success(expectedResponse));
+
+            // Act
+            var result = await _controller.ListDegreeVersions(degreeCode, CancellationToken.None);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var response = Assert.IsType<DegreeVersionListResponse>(okResult.Value);
+            Assert.Equal(degreeCode, response.DegreeCode);
+            Assert.Equal(2, response.CurrentVersion);
+            Assert.Equal(2, response.Versions.Count);
         }
     }
 }
