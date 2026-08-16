@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ChainDegree.Core.Application.Abstractions.Crypto;
 using ChainDegree.Core.Application.Abstractions.Repositories;
+using ChainDegree.Core.Application.Degrees.Queries.ListDegreeVersions;
 using ChainDegree.Core.Domain.Degrees;
 using ChainDegree.Core.Domain.Degrees.Entities;
 using ChainDegree.Core.Domain.Degrees.Enums;
@@ -89,11 +91,11 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
         public async Task<VerificationSnapshot?> GetVerificationSnapshotAsync(string degreeCode, int? version, CancellationToken ct = default)
         {
             var degreeInfo = await (
-                from d in _context.Degrees.AsNoTracking()
-                where d.DegreeCode == degreeCode
-                join i in _context.EducationInstitutions.AsNoTracking() on d.InstitutionId equals i.Id into instGroup
+                from d in _context.Degrees.IgnoreQueryFilters().AsNoTracking()
+                where d.DeletedAt == null && d.DegreeCode == degreeCode
+                join i in _context.EducationInstitutions.IgnoreQueryFilters().AsNoTracking() on d.InstitutionId equals i.Id into instGroup
                 from i in instGroup.DefaultIfEmpty()
-                join s in _context.Students.AsNoTracking() on d.StudentId equals s.Id into studentGroup
+                join s in _context.Students.IgnoreQueryFilters().AsNoTracking() on d.StudentId equals s.Id into studentGroup
                 from s in studentGroup.DefaultIfEmpty()
                 select new
                 {
@@ -115,8 +117,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
             if (version.HasValue && version.Value < degree.CurrentVersion)
             {
                 var historicalVersion = await _context.DegreeVersions
+                    .IgnoreQueryFilters()
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.DegreeId == degree.Id && x.Version == version.Value, ct);
+                    .FirstOrDefaultAsync(x => x.DeletedAt == null && x.DegreeId == degree.Id && x.Version == version.Value, ct);
 
                 if (historicalVersion == null)
                 {
@@ -142,9 +145,13 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                 );
             }
 
+            var targetVersion = version ?? degree.CurrentVersion;
             var batchDegreeRecord = await _context.BatchDegreeRecords
+                .IgnoreQueryFilters()
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+                .Where(x => x.DegreeId == degree.Id && x.Version == targetVersion)
+                .OrderByDescending(x => x.Version)
+                .FirstOrDefaultAsync(ct);
 
             return new VerificationSnapshot(
                 degreeId: degree.Id,
@@ -173,6 +180,16 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
 
             try
             {
+                var trimmed = batchRecord.ProofHashesJson.TrimStart();
+                if (trimmed.StartsWith("{"))
+                {
+                    var proofObj = System.Text.Json.JsonSerializer.Deserialize<MerkleProofData>(batchRecord.ProofHashesJson);
+                    if (proofObj != null)
+                    {
+                        return batchRecord.ProofHashesJson;
+                    }
+                }
+
                 var hashes = System.Text.Json.JsonSerializer.Deserialize<List<string>>(batchRecord.ProofHashesJson);
                 if (hashes == null) return null;
 
@@ -185,13 +202,12 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                     currentIndex /= 2;
                 }
 
-                var proofData = new
-                {
-                    LeafIndex = batchRecord.LeafIndex,
-                    LeafHash = leafHash,
-                    ProofHashes = hashes,
-                    ProofDirections = directions
-                };
+                var proofData = new MerkleProofData(
+                    batchRecord.LeafIndex,
+                    leafHash,
+                    hashes,
+                    directions
+                );
 
                 return System.Text.Json.JsonSerializer.Serialize(proofData);
             }
@@ -201,11 +217,84 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
             }
         }
 
-        public async Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, CancellationToken ct = default)
+        public async Task<DegreeVersionListResponse?> GetDegreeVersionsAsync(string degreeCode, CancellationToken ct = default)
         {
-            var record = await _context.BatchDegreeRecords
+            var degree = await _context.Degrees
+                .IgnoreQueryFilters()
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.DegreeId == degreeId, ct);
+                .Where(d => d.DeletedAt == null && d.DegreeCode == degreeCode)
+                .Select(d => new
+                {
+                    d.Id,
+                    d.DegreeCode,
+                    d.CurrentVersion,
+                    d.IssuedAt,
+                    d.UpdatedAt
+                })
+                .FirstOrDefaultAsync(ct);
+
+            if (degree == null)
+            {
+                return null;
+            }
+
+            var historicalVersions = await _context.DegreeVersions
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(v => v.DeletedAt == null && v.DegreeId == degree.Id)
+                .OrderByDescending(v => v.Version)
+                .Select(v => new DegreeVersionItem(
+                    v.Version,
+                    v.EffectiveAt,
+                    false))
+                .ToListAsync(ct);
+
+            var list = new List<DegreeVersionItem>();
+
+            // Add current version
+            var currentEffectiveAt = degree.UpdatedAt != default(DateTime) ? degree.UpdatedAt : degree.IssuedAt;
+            list.Add(new DegreeVersionItem(degree.CurrentVersion, currentEffectiveAt, true));
+
+            // Add historical versions
+            foreach (var hist in historicalVersions)
+            {
+                if (hist.Version < degree.CurrentVersion && !list.Any(x => x.Version == hist.Version))
+                {
+                    list.Add(hist);
+                }
+            }
+
+            // Ensure all versions 1..CurrentVersion are accounted for
+            for (int v = degree.CurrentVersion - 1; v >= 1; v--)
+            {
+                if (!list.Any(x => x.Version == v))
+                {
+                    list.Add(new DegreeVersionItem(v, degree.IssuedAt, false));
+                }
+            }
+
+            var sorted = list.OrderByDescending(x => x.Version).ToList();
+
+            return new DegreeVersionListResponse(degree.DegreeCode, degree.CurrentVersion, sorted);
+        }
+
+        public async Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, int? version = null, CancellationToken ct = default)
+        {
+            var query = _context.BatchDegreeRecords
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(x => x.DegreeId == degreeId);
+
+            if (version.HasValue)
+            {
+                query = query.Where(x => x.Version == version.Value);
+            }
+            else
+            {
+                query = query.OrderByDescending(x => x.Version);
+            }
+
+            var record = await query.FirstOrDefaultAsync(ct);
             return record?.BatchId;
         }
     }

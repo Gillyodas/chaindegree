@@ -14,7 +14,14 @@ namespace ChainDegree.Core.Infrastructure.Cryptography.Services
                 throw new ArgumentException("Leaf hashes cannot be null or empty.");
             }
 
-            List<string> currentLevel = new List<string>(leafHashes);
+            List<string> cleanLeafHashes = new List<string>(leafHashes.Count);
+            foreach (var hash in leafHashes)
+            {
+                string clean = hash.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? hash.Substring(2) : hash;
+                cleanLeafHashes.Add(clean.ToLowerInvariant());
+            }
+
+            List<string> currentLevel = new List<string>(cleanLeafHashes);
             List<List<string>> tree = new List<List<string>> { currentLevel };
 
             while (currentLevel.Count > 1)
@@ -34,7 +41,7 @@ namespace ChainDegree.Core.Infrastructure.Cryptography.Services
             string root = currentLevel[0];
             List<MerkleProofData> proofs = new List<MerkleProofData>();
 
-            for (int i = 0; i < leafHashes.Count; i++)
+            for (int i = 0; i < cleanLeafHashes.Count; i++)
             {
                 List<string> proofHashes = new List<string>();
                 List<bool> proofDirections = new List<bool>();
@@ -54,7 +61,7 @@ namespace ChainDegree.Core.Infrastructure.Cryptography.Services
                     currentIndex /= 2;
                 }
 
-                proofs.Add(new MerkleProofData(i, leafHashes[i], proofHashes, proofDirections));
+                proofs.Add(new MerkleProofData(i, cleanLeafHashes[i], proofHashes, proofDirections));
             }
 
             return new MerkleTreeResult(root, proofs);
@@ -67,22 +74,29 @@ namespace ChainDegree.Core.Infrastructure.Cryptography.Services
                 return false;
             }
 
-            string current = leafHash;
+            string cleanLeafHash = leafHash.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? leafHash.Substring(2) : leafHash;
+            string cleanMerkleRoot = merkleRoot.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? merkleRoot.Substring(2) : merkleRoot;
+
+            string current = cleanLeafHash.ToLowerInvariant();
             for (int i = 0; i < proof.ProofHashes.Count; i++)
             {
                 string sibling = proof.ProofHashes[i];
+                string cleanSibling = sibling.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? sibling.Substring(2) : sibling;
                 bool isSiblingRight = proof.ProofDirections[i];
 
-                current = isSiblingRight ? HashNodes(current, sibling) : HashNodes(sibling, current);
+                current = isSiblingRight ? HashNodes(current, cleanSibling) : HashNodes(cleanSibling, current);
             }
 
-            return string.Equals(current, merkleRoot, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(current, cleanMerkleRoot, StringComparison.OrdinalIgnoreCase);
         }
 
         private string HashNodes(string left, string right)
         {
-            byte[] leftBytes = Convert.FromHexString(left);
-            byte[] rightBytes = Convert.FromHexString(right);
+            string cleanLeft = left.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? left.Substring(2) : left;
+            string cleanRight = right.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? right.Substring(2) : right;
+
+            byte[] leftBytes = Convert.FromHexString(cleanLeft);
+            byte[] rightBytes = Convert.FromHexString(cleanRight);
 
             byte[] combined = new byte[leftBytes.Length + rightBytes.Length];
             Buffer.BlockCopy(leftBytes, 0, combined, 0, leftBytes.Length);

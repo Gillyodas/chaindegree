@@ -7,10 +7,17 @@ export function PublicLayout() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="flex h-16 items-center justify-between border-b px-6">
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg text-primary">
-          <GraduationCap className="h-6 w-6" />
-          <span>ChainDegree</span>
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg text-primary">
+            <GraduationCap className="h-6 w-6" />
+            <span>ChainDegree</span>
+          </Link>
+          <nav className="hidden sm:flex items-center gap-4 text-sm font-medium text-muted-foreground">
+            <Link to="/verify" className="hover:text-foreground transition-colors">
+              Verify Degree
+            </Link>
+          </nav>
+        </div>
 
         <div className="flex items-center gap-3">
           <Button asChild variant="outline" size="sm">

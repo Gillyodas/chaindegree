@@ -1,1 +1,15 @@
-export { ComingSoonPage as VerificationComingSoonPage } from './pages/ComingSoonPage';
+export { VerificationPortalPage } from './pages/VerificationPortalPage';
+export { VerificationForm } from './components/VerificationForm';
+export { VerificationResult } from './components/VerificationResult';
+export { VerifiedResult } from './components/VerifiedResult';
+export { RevokedResult } from './components/RevokedResult';
+export { TamperedWarning } from './components/TamperedWarning';
+export { NotFoundResult } from './components/NotFoundResult';
+export { VerificationError } from './components/VerificationError';
+export { useVerifyDegree } from './hooks/useVerifyDegree';
+export { useDegreeVersions } from './hooks/useDegreeVersions';
+export * from './verification.types';
+export * from './verification.schema';
+export * from './verification.api';
+export * from './verification.mapper';
+export * from './verification.keys';

@@ -528,7 +528,9 @@ namespace ChainDegree.Core.Infrastructure.BackgroundWorkers
                             var exists = await dbContext.DegreeVersions.AnyAsync(x => x.DegreeId == degree.Id && x.Version == versionNum, ct);
                             if (!exists)
                             {
-                                var oldProofRecord = await dbContext.BatchDegreeRecords.AsNoTracking().FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+                                var oldProofRecord = await dbContext.BatchDegreeRecords
+                                    .AsNoTracking()
+                                    .FirstOrDefaultAsync(x => x.DegreeId == degree.Id && x.Version == versionNum, ct);
                                 var previousVersion = DegreeVersion.Create(
                                     degree.Id, versionNum, degree.CryptoData.DataHashLocal, staging.CryptoData.DataHashLocal,
                                     degree.TxHashBlockchain ?? batchRecord.TxHash ?? "", degree.UpdatedAt, degree.CryptoData.PlainDataJson,
