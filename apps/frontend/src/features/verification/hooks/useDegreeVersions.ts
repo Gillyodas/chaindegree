@@ -30,7 +30,8 @@ export function useDegreeVersions(degreeCode: string) {
     queryKey: verificationKeys.versions(debouncedCode),
     queryFn: ({ signal }) => verificationApi.getDegreeVersions(debouncedCode, signal),
     enabled: isValidPattern,
-    staleTime: Infinity,
+    staleTime: 5000,
+    gcTime: 60000,
     retry: false,
   });
 

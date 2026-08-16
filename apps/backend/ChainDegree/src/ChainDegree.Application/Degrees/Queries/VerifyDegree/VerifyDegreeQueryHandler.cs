@@ -201,8 +201,8 @@ namespace ChainDegree.Core.Application.Degrees.Queries.VerifyDegree
                 return Result<VerifyDegreeResponse>.Failure(DegreeErrors.BlockchainInvalid);
             }
 
-            // 4.1 Lookup BatchId from DB using DegreeId
-            var batchId = await _degreeRepository.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, ct);
+            // 4.1 Lookup BatchId from DB using DegreeId and Version
+            var batchId = await _degreeRepository.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, snapshot.Version, ct);
             if (batchId == null)
             {
                 _logger.LogWarning("Batch ID not found for DegreeId={DegreeId}", snapshot.DegreeId);

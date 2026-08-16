@@ -145,9 +145,13 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
                 );
             }
 
+            var targetVersion = version ?? degree.CurrentVersion;
             var batchDegreeRecord = await _context.BatchDegreeRecords
+                .IgnoreQueryFilters()
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.DegreeId == degree.Id, ct);
+                .Where(x => x.DegreeId == degree.Id && x.Version == targetVersion)
+                .OrderByDescending(x => x.Version)
+                .FirstOrDefaultAsync(ct);
 
             return new VerificationSnapshot(
                 degreeId: degree.Id,
@@ -274,12 +278,23 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
             return new DegreeVersionListResponse(degree.DegreeCode, degree.CurrentVersion, sorted);
         }
 
-        public async Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, CancellationToken ct = default)
+        public async Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, int? version = null, CancellationToken ct = default)
         {
-            var record = await _context.BatchDegreeRecords
+            var query = _context.BatchDegreeRecords
                 .IgnoreQueryFilters()
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.DegreeId == degreeId, ct);
+                .Where(x => x.DegreeId == degreeId);
+
+            if (version.HasValue)
+            {
+                query = query.Where(x => x.Version == version.Value);
+            }
+            else
+            {
+                query = query.OrderByDescending(x => x.Version);
+            }
+
+            var record = await query.FirstOrDefaultAsync(ct);
             return record?.BatchId;
         }
     }

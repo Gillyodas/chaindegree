@@ -205,7 +205,7 @@ namespace ChainDegree.Application.Tests.Degrees
                      .ReturnsAsync(snapshot.DataHash);
 
             var fixedBatchId = Guid.NewGuid();
-            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<CancellationToken>()))
+            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                      .ReturnsAsync(fixedBatchId);
 
             _mockBlockchain.Setup(b => b.GetBatchAsync(fixedBatchId.ToString(), It.IsAny<CancellationToken>()))
@@ -234,7 +234,7 @@ namespace ChainDegree.Application.Tests.Degrees
                      .ReturnsAsync(snapshot.DataHash);
 
             var fixedBatchId = Guid.NewGuid();
-            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<CancellationToken>()))
+            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                      .ReturnsAsync(fixedBatchId);
 
             _mockBlockchain.Setup(b => b.GetBatchAsync(fixedBatchId.ToString(), It.IsAny<CancellationToken>()))
@@ -266,7 +266,7 @@ namespace ChainDegree.Application.Tests.Degrees
                      .ReturnsAsync(snapshot.DataHash);
 
             var fixedBatchId = Guid.NewGuid();
-            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<CancellationToken>()))
+            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                      .ReturnsAsync(fixedBatchId);
 
             _mockBlockchain.Setup(b => b.GetBatchAsync(fixedBatchId.ToString(), It.IsAny<CancellationToken>()))
@@ -315,7 +315,7 @@ namespace ChainDegree.Application.Tests.Degrees
                             .Returns(Result<string>.Success("expectedDirectHash"));
 
             var fixedBatchId = Guid.NewGuid();
-            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<CancellationToken>()))
+            _mockRepo.Setup(r => r.GetBatchIdByDegreeIdAsync(snapshot.DegreeId, It.IsAny<int?>(), It.IsAny<CancellationToken>()))
                      .ReturnsAsync(fixedBatchId);
 
             _mockBlockchain.Setup(b => b.GetBatchAsync(fixedBatchId.ToString(), It.IsAny<CancellationToken>()))

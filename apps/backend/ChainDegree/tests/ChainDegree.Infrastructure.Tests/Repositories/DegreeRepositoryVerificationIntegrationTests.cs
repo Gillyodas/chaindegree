@@ -330,6 +330,146 @@ namespace ChainDegree.Infrastructure.Tests.Repositories
             Assert.Equal(1, versionsResponse.Versions[1].Version);
             Assert.False(versionsResponse.Versions[1].IsCurrent);
         }
+
+        [Fact]
+        public async Task VerifyDegreeQueryHandler_WhenDegreeHasMultipleVersions_VerifiesVersion2WithBatch2Correctly()
+        {
+            // Arrange
+            var institution = EducationInstitution.Create("HCMUT", "Bach Khoa University", "contact@hcmut.edu.vn");
+            var studentResult = Student.Create("STU-004", "Bob Dylan", "bob@example.com", Guid.NewGuid());
+            Assert.True(studentResult.IsSuccess);
+            var student = studentResult.Value;
+
+            _dbContext.EducationInstitutions.Add(institution);
+            _dbContext.Students.Add(student);
+
+            string degreeCode = "DEG-2026-000012";
+            var issuedDate = new DateTime(2026, 1, 15, 8, 0, 0, DateTimeKind.Utc);
+            string saltV1 = _hashService.GenerateSalt().Value;
+            string saltV2 = _hashService.GenerateSalt().Value;
+
+            string dataHashV1 = "0xhash_version_1_original_issuance";
+            string dataHashV2 = "0xhash_version_2_updated_record";
+
+            string plainDataJsonV2 = JsonSerializer.Serialize(new
+            {
+                degreeCode = degreeCode,
+                studentId = student.Id,
+                major = "Artificial Intelligence",
+                classification = "Xuat Sac",
+                issuedAt = issuedDate.ToString("o")
+            });
+
+            var cryptoSnapshotV2 = CryptoSnapshot.Reconstruct(plainDataJsonV2, saltV2, dataHashV2);
+            var degreeResult = Degree.Create(
+                totalDegree: 11,
+                institutionId: institution.Id,
+                signedByRegistrarId: Guid.NewGuid(),
+                studentId: student.Id,
+                major: "Artificial Intelligence",
+                classification: "Xuat Sac",
+                cryptoData: cryptoSnapshotV2
+            );
+            Assert.True(degreeResult.IsSuccess);
+            var degree = degreeResult.Value;
+
+            // Set to version 2 (updated)
+            degree.SetVersionForTesting(2);
+            string txHashV2 = "0x9ac043764da68b222766cd522e33e0a59b7df9ad6c48f1280a2fe0434f4c490d";
+            degree.ConfirmBlockchainSync(txHashV2);
+            degree.SetRowVersionForTesting();
+            _dbContext.Degrees.Add(degree);
+
+            // Batch 1 (Issue - Version 1)
+            var batchId1 = Guid.NewGuid();
+            var treeResult1 = _merkleTreeService.BuildTree(new List<string> { dataHashV1 });
+            _dbContext.BatchRecords.Add(new BatchRecord
+            {
+                Id = batchId1,
+                InstitutionId = institution.Id,
+                BatchName = "BATCH_1_ISSUE",
+                Status = BatchStatus.Completed,
+                DegreeCount = 1,
+                MerkleRoot = treeResult1.MerkleRoot,
+                TxHash = "0xbatch1txhash",
+                CreatedAt = DateTime.UtcNow.AddDays(-10)
+            });
+            _dbContext.BatchDegreeRecords.Add(new BatchDegreeRecord
+            {
+                BatchId = batchId1,
+                DegreeId = degree.Id,
+                Version = 1,
+                LeafIndex = 0,
+                ProofHashesJson = JsonSerializer.Serialize(treeResult1.Proofs[0])
+            });
+
+            // Batch 2 (Update - Version 2)
+            var batchId2 = Guid.NewGuid();
+            var treeResult2 = _merkleTreeService.BuildTree(new List<string> { dataHashV2 });
+            _dbContext.BatchRecords.Add(new BatchRecord
+            {
+                Id = batchId2,
+                InstitutionId = institution.Id,
+                BatchName = "BATCH_2_UPDATE",
+                Status = BatchStatus.Completed,
+                DegreeCount = 1,
+                MerkleRoot = treeResult2.MerkleRoot,
+                TxHash = txHashV2,
+                CreatedAt = DateTime.UtcNow
+            });
+            _dbContext.BatchDegreeRecords.Add(new BatchDegreeRecord
+            {
+                BatchId = batchId2,
+                DegreeId = degree.Id,
+                Version = 2,
+                LeafIndex = 0,
+                ProofHashesJson = JsonSerializer.Serialize(treeResult2.Proofs[0])
+            });
+            await _dbContext.SaveChangesAsync();
+
+            // Mock Blockchain returning on-chain batch metadata for Batch 2
+            var mockBlockchain = new Mock<IBlockchainService>();
+            mockBlockchain
+                .Setup(b => b.GetBatchAsync(batchId2.ToString(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Result<BatchMetadata>.Success(new BatchMetadata(
+                    MerkleRoot: treeResult2.MerkleRoot,
+                    Timestamp: 1723800000,
+                    InstitutionId: institution.Id.ToString(),
+                    ActionType: "Update",
+                    Exists: true
+                )));
+
+            var mockDegreeHashService = new Mock<IDegreeHashService>();
+            mockDegreeHashService
+                .Setup(s => s.CalculateHashAsync(It.IsAny<DegreeData>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(dataHashV2);
+
+            var mockCanonicalizer = new Mock<IJsonCanonicalizer>();
+            var mockBehaviorLog = new Mock<IBehaviorLogService>();
+
+            var handler = new VerifyDegreeQueryHandler(
+                _degreeRepository,
+                mockBlockchain.Object,
+                _merkleTreeService,
+                mockDegreeHashService.Object,
+                mockCanonicalizer.Object,
+                _hashService,
+                mockBehaviorLog.Object,
+                NullLogger<VerifyDegreeQueryHandler>.Instance
+            );
+
+            // Act: Verify latest version (Version 2)
+            var verifyResult = await handler.Handle(new VerifyDegreeQuery(degreeCode, null), CancellationToken.None);
+
+            // Assert
+            Assert.True(verifyResult.IsSuccess);
+            Assert.True(verifyResult.Value.Verified);
+            Assert.Equal("Confirmed", verifyResult.Value.Status);
+            Assert.Equal(2, verifyResult.Value.Version);
+            Assert.Equal("Artificial Intelligence", verifyResult.Value.Major);
+            Assert.Equal(txHashV2, verifyResult.Value.Blockchain?.TxHash);
+            Assert.Equal(treeResult2.MerkleRoot, verifyResult.Value.Blockchain?.MerkleRoot);
+        }
     }
 
     public static class DegreeTestingExtensions

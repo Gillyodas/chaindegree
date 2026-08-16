@@ -23,6 +23,6 @@ namespace ChainDegree.Core.Application.Abstractions.Repositories
         void RemoveUpdateRequest(DegreeUpdateRequest request);
         Task<VerificationSnapshot?> GetVerificationSnapshotAsync(string degreeCode, int? version, CancellationToken ct = default);
         Task<DegreeVersionListResponse?> GetDegreeVersionsAsync(string degreeCode, CancellationToken ct = default);
-        Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, CancellationToken ct = default);
+        Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, int? version = null, CancellationToken ct = default);
     }
 }
