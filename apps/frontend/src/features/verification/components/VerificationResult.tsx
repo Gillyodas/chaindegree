@@ -1,4 +1,3 @@
-import React from 'react';
 import type { VerificationResultType } from '../verification.types';
 import { VerifiedResult } from './VerifiedResult';
 import { RevokedResult } from './RevokedResult';

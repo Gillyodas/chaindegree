@@ -1,4 +1,3 @@
-import React from 'react';
 import { ShieldAlert, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';

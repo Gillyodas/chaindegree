@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle2, Copy, Check, ExternalLink, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2, Copy, Check, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';

@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ShieldCheck, Shield, Lock, Layers, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
 import { VerificationForm } from '../components/VerificationForm';
 import { VerificationResult } from '../components/VerificationResult';
 import { useVerifyDegree } from '../hooks/useVerifyDegree';

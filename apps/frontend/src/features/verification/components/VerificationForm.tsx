@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ChangeEvent } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Search, Loader2, AlertTriangle, AlertCircle } from 'lucide-react';
@@ -94,14 +94,13 @@ export function VerificationForm({
           <Input
             id="degree-code-input"
             {...register('degreeCode', {
-              onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+              onChange: (e: ChangeEvent<HTMLInputElement>) => {
                 onDegreeCodeInputChange(e.target.value);
                 onDegreeCodeChange?.();
               },
             })}
             ref={(e) => {
               register('degreeCode').ref(e);
-              // @ts-expect-error - assigning mutable ref
               inputRef.current = e;
             }}
             placeholder="Enter degree code (e.g., DEG-2026-000001)"
