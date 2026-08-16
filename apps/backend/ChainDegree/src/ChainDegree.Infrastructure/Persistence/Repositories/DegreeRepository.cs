@@ -91,11 +91,11 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
         public async Task<VerificationSnapshot?> GetVerificationSnapshotAsync(string degreeCode, int? version, CancellationToken ct = default)
         {
             var degreeInfo = await (
-                from d in _context.Degrees.AsNoTracking()
-                where d.DegreeCode == degreeCode
-                join i in _context.EducationInstitutions.AsNoTracking() on d.InstitutionId equals i.Id into instGroup
+                from d in _context.Degrees.IgnoreQueryFilters().AsNoTracking()
+                where d.DeletedAt == null && d.DegreeCode == degreeCode
+                join i in _context.EducationInstitutions.IgnoreQueryFilters().AsNoTracking() on d.InstitutionId equals i.Id into instGroup
                 from i in instGroup.DefaultIfEmpty()
-                join s in _context.Students.AsNoTracking() on d.StudentId equals s.Id into studentGroup
+                join s in _context.Students.IgnoreQueryFilters().AsNoTracking() on d.StudentId equals s.Id into studentGroup
                 from s in studentGroup.DefaultIfEmpty()
                 select new
                 {
@@ -117,8 +117,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
             if (version.HasValue && version.Value < degree.CurrentVersion)
             {
                 var historicalVersion = await _context.DegreeVersions
+                    .IgnoreQueryFilters()
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.DegreeId == degree.Id && x.Version == version.Value, ct);
+                    .FirstOrDefaultAsync(x => x.DeletedAt == null && x.DegreeId == degree.Id && x.Version == version.Value, ct);
 
                 if (historicalVersion == null)
                 {
@@ -215,8 +216,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
         public async Task<DegreeVersionListResponse?> GetDegreeVersionsAsync(string degreeCode, CancellationToken ct = default)
         {
             var degree = await _context.Degrees
+                .IgnoreQueryFilters()
                 .AsNoTracking()
-                .Where(d => d.DegreeCode == degreeCode)
+                .Where(d => d.DeletedAt == null && d.DegreeCode == degreeCode)
                 .Select(d => new
                 {
                     d.Id,
@@ -233,8 +235,9 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
             }
 
             var historicalVersions = await _context.DegreeVersions
+                .IgnoreQueryFilters()
                 .AsNoTracking()
-                .Where(v => v.DegreeId == degree.Id)
+                .Where(v => v.DeletedAt == null && v.DegreeId == degree.Id)
                 .OrderByDescending(v => v.Version)
                 .Select(v => new DegreeVersionItem(
                     v.Version,
@@ -274,6 +277,7 @@ namespace ChainDegree.Core.Infrastructure.Persistence.Repositories
         public async Task<Guid?> GetBatchIdByDegreeIdAsync(Guid degreeId, CancellationToken ct = default)
         {
             var record = await _context.BatchDegreeRecords
+                .IgnoreQueryFilters()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.DegreeId == degreeId, ct);
             return record?.BatchId;
