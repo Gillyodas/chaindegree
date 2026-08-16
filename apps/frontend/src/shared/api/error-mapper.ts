@@ -9,6 +9,7 @@ const businessErrorMessages: Record<string, string> = {
     'Blockchain verification failed. Data integrity cannot be confirmed.',
   DEGREE_NOT_FOUND: 'No degree found with the specified code.',
   UNSUPPORTED_VERSION: 'The specified degree version is not supported.',
+  INVALID_SALT_FORMAT: 'Salt must be a 16-character hexadecimal string.',
   FILTER_CRITERIA_NOT_SATISFIED:
     'Your degree does not meet the minimum requirements for this position.',
   'Report.EvidenceRequired': 'Evidence file is required when submitting a report.',
