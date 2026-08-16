@@ -19,8 +19,8 @@ const IssueDegreeForm = lazy(() =>
 const DegreeComingSoonPage = lazy(() =>
   import('@/features/degree').then((m) => ({ default: m.DegreeComingSoonPage })),
 );
-const VerificationComingSoonPage = lazy(() =>
-  import('@/features/verification').then((m) => ({ default: m.VerificationComingSoonPage })),
+const VerificationPortalPage = lazy(() =>
+  import('@/features/verification').then((m) => ({ default: m.VerificationPortalPage })),
 );
 const ReportComingSoonPage = lazy(() =>
   import('@/features/report').then((m) => ({ default: m.ReportComingSoonPage })),
@@ -51,7 +51,7 @@ export function AppRouter() {
 
             {/* Public Unauthenticated Portal Routes */}
             <Route element={<PublicLayout />}>
-              <Route path="/verify" element={<VerificationComingSoonPage />} />
+              <Route path="/verify" element={<VerificationPortalPage />} />
             </Route>
 
             {/* Protected Dashboard Routes */}
