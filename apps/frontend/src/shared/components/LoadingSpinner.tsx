@@ -15,7 +15,7 @@ const sizeClasses = {
 
 export function LoadingSpinner({ size = 'md', className, label }: LoadingSpinnerProps) {
   return (
-    <div className="flex items-center justify-center gap-2 py-4">
+    <div role="status" aria-label={label || 'Loading'} className="flex items-center justify-center gap-2 py-4">
       <Loader2 className={cn('animate-spin text-primary', sizeClasses[size], className)} />
       {label && <span className="text-sm text-muted-foreground">{label}</span>}
     </div>
