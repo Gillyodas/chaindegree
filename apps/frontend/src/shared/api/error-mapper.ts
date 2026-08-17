@@ -12,7 +12,15 @@ const businessErrorMessages: Record<string, string> = {
   INVALID_SALT_FORMAT: 'Salt must be a 16-character hexadecimal string.',
   FILTER_CRITERIA_NOT_SATISFIED:
     'Your degree does not meet the minimum requirements for this position.',
-  'Report.EvidenceRequired': 'Evidence file is required when submitting a report.',
+  'Report.NotFound': 'The specified report was not found.',
+  'Report.UnauthorizedReporter': 'Only Students and Recruiters are authorized to submit reports.',
+  'Report.StudentCannotReportOthersDegree': 'Students are only permitted to submit reports for degrees issued to themselves.',
+  'Report.EvidenceRequired': 'An evidence file (PDF, PNG, or JPG) is required when submitting a report.',
+  'Report.AlreadyExistsUnderReview': 'A report for this degree is already under review by your account.',
+  'Report.InvalidEvidenceFormat': 'The evidence file signature or content type is invalid. Only valid PDF, PNG, or JPG files are allowed.',
+  'Report.UnauthorizedEvidenceDownload': 'You do not have permission to download evidence for this report.',
+  'Report.EmptyRejectionReason': 'A valid reason must be provided when rejecting a report.',
+  'Report.AlreadyReviewed': 'This report has already been reviewed.',
 };
 
 export function getBusinessErrorMessage(errorCode?: string): string | null {
