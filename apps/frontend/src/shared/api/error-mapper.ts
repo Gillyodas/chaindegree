@@ -15,7 +15,7 @@ const businessErrorMessages: Record<string, string> = {
   'Report.NotFound': 'The specified report was not found.',
   'Report.UnauthorizedReporter': 'Only Students and Recruiters are authorized to submit reports.',
   'Report.StudentCannotReportOthersDegree': 'Students are only permitted to submit reports for degrees issued to themselves.',
-  'Report.EvidenceRequired': 'An evidence file (PDF, PNG, or JPG) is required when submitting a report.',
+  'Report.EvidenceRequired': 'Evidence file is required when submitting a report.',
   'Report.AlreadyExistsUnderReview': 'A report for this degree is already under review by your account.',
   'Report.InvalidEvidenceFormat': 'The evidence file signature or content type is invalid. Only valid PDF, PNG, or JPG files are allowed.',
   'Report.UnauthorizedEvidenceDownload': 'You do not have permission to download evidence for this report.',

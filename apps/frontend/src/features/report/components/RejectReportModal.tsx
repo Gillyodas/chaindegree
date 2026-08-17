@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -53,12 +53,11 @@ export function RejectReportModal({
     },
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      reset({ reason: '' });
-      setServerError(null);
-    }
-  }, [isOpen, reset]);
+  const handleClose = () => {
+    reset({ reason: '' });
+    setServerError(null);
+    onClose();
+  };
 
   const onSubmit = async (values: RejectReportFormValues) => {
     setServerError(null);
@@ -71,7 +70,7 @@ export function RejectReportModal({
       if (onSuccess) {
         onSuccess();
       }
-      onClose();
+      handleClose();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setServerError(err.message);
@@ -82,7 +81,7 @@ export function RejectReportModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-destructive">
@@ -141,7 +140,7 @@ export function RejectReportModal({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
             >
               Cancel

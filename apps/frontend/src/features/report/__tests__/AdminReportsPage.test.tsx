@@ -171,7 +171,8 @@ describe('AdminReportsPage', () => {
     });
 
     const evidenceButtons = screen.getAllByRole('button', { name: /Evidence/i });
-    fireEvent.click(evidenceButtons[0]);
+    expect(evidenceButtons[0]).toBeDefined();
+    fireEvent.click(evidenceButtons[0]!);
 
     await waitFor(() => {
       expect(reportApi.downloadReportEvidence).toHaveBeenCalledWith(

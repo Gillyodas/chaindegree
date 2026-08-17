@@ -43,8 +43,14 @@ export const reportApi = {
       },
     );
 
+    const contentTypeHeader = response.headers['content-type'];
+    const contentType =
+      typeof contentTypeHeader === 'string'
+        ? contentTypeHeader
+        : 'application/octet-stream';
+
     const blob = new Blob([response.data], {
-      type: response.headers['content-type'] || 'application/octet-stream',
+      type: contentType,
     });
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');

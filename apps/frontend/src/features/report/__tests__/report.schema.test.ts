@@ -35,7 +35,7 @@ describe('report.schema', () => {
     });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
+    if (!result.success && result.error.issues[0]) {
       expect(result.error.issues[0].message).toBe('Invalid degree ID.');
     }
   });
@@ -62,7 +62,7 @@ describe('report.schema', () => {
     });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
+    if (!result.success && result.error.issues[0]) {
       expect(result.error.issues[0].message).toContain('at least 10 characters');
     }
   });
@@ -77,7 +77,7 @@ describe('report.schema', () => {
     });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
+    if (!result.success && result.error.issues[0]) {
       expect(result.error.issues[0].message).toContain('cannot exceed 2000 characters');
     }
   });
@@ -92,7 +92,7 @@ describe('report.schema', () => {
     });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
+    if (!result.success && result.error.issues[0]) {
       expect(result.error.issues[0].message).toBe('Evidence file cannot be empty.');
     }
   });
@@ -107,7 +107,7 @@ describe('report.schema', () => {
     });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
+    if (!result.success && result.error.issues[0]) {
       expect(result.error.issues[0].message).toBe('File size must not exceed 5MB.');
     }
   });
@@ -122,7 +122,7 @@ describe('report.schema', () => {
     });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
+    if (!result.success && result.error.issues[0]) {
       expect(result.error.issues[0].message).toBe('Only PDF, PNG, and JPG files are supported.');
     }
   });

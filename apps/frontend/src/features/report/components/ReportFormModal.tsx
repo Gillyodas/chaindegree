@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -55,17 +55,16 @@ export function ReportFormModal({
     },
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      reset({
-        degreeId,
-        reportType: 'Administrative_Error',
-        description: '',
-        evidenceFile: undefined as unknown as File,
-      });
-      setServerError(null);
-    }
-  }, [isOpen, degreeId, reset]);
+  const handleClose = () => {
+    reset({
+      degreeId,
+      reportType: 'Administrative_Error',
+      description: '',
+      evidenceFile: undefined as unknown as File,
+    });
+    setServerError(null);
+    onClose();
+  };
 
   const onSubmit = async (values: SubmitReportFormValues) => {
     setServerError(null);
@@ -80,7 +79,7 @@ export function ReportFormModal({
       if (onSuccess) {
         onSuccess(response.reportId);
       }
-      onClose();
+      handleClose();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setServerError(err.message);
@@ -91,7 +90,7 @@ export function ReportFormModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-amber-600 dark:text-amber-400">
@@ -199,7 +198,7 @@ export function ReportFormModal({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
             >
               Cancel
