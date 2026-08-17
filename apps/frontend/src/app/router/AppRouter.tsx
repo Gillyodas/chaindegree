@@ -22,8 +22,8 @@ const DegreeComingSoonPage = lazy(() =>
 const VerificationPortalPage = lazy(() =>
   import('@/features/verification').then((m) => ({ default: m.VerificationPortalPage })),
 );
-const ReportComingSoonPage = lazy(() =>
-  import('@/features/report').then((m) => ({ default: m.ReportComingSoonPage })),
+const AdminReportsPage = lazy(() =>
+  import('@/features/report').then((m) => ({ default: m.AdminReportsPage })),
 );
 const ReputationComingSoonPage = lazy(() =>
   import('@/features/reputation').then((m) => ({ default: m.ReputationComingSoonPage })),
@@ -80,7 +80,7 @@ export function AppRouter() {
 
                 {/* Admin Report Review Route (Admin Only) */}
                 <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
-                  <Route path="/admin/reports" element={<ReportComingSoonPage />} />
+                  <Route path="/admin/reports" element={<AdminReportsPage />} />
                 </Route>
 
                 {/* Reputation Dashboard Route */}
