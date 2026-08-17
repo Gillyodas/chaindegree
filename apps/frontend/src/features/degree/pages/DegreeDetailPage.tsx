@@ -10,16 +10,20 @@ import { EmptyState } from '@/shared/components/EmptyState';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { LoadingSpinner } from '@/shared/components/LoadingSpinner';
 import { HttpError } from '@/shared/api/http';
+import { useAuth } from '@/app/providers/AuthProvider';
 import { useDegreeDetailQuery } from '../hooks/useDegreeQueries';
 import { UpdateDegreeModal } from '../components/UpdateDegreeModal';
 import { RevokeDegreeDialog } from '../components/RevokeDegreeDialog';
+import { ReportFormModal } from '@/features/report/components/ReportFormModal';
 
 export function DegreeDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { currentUser } = useAuth();
   const { data: degree, isLoading, error, refetch } = useDegreeDetailQuery(id || '');
 
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [isRevokeOpen, setIsRevokeOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -68,7 +72,13 @@ export function DegreeDetailPage() {
 
   // State Transition UX Hints: Only Confirmed or Pending_Confirmation allow Update/Revoke
   const canUpdateOrRevoke =
-    degree.status === 'Confirmed' || degree.status === 'Pending_Confirmation';
+    (currentUser?.role === 'Registrar') &&
+    (degree.status === 'Confirmed' || degree.status === 'Pending_Confirmation');
+
+  // RBAC for reporting: Recruiter can report any degree, Student can report their own degree
+  const canReport =
+    currentUser?.role === 'Recruiter' ||
+    (currentUser?.role === 'Student' && currentUser.id === degree.studentId);
 
   const handleUpdateSuccess = (msg: string) => {
     toast.success(msg);
@@ -96,47 +106,53 @@ export function DegreeDetailPage() {
         </Link>
 
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!canUpdateOrRevoke}
-            onClick={() => setIsUpdateOpen(true)}
-            title={
-              canUpdateOrRevoke
-                ? 'Update Degree Academic Details'
-                : 'Degree status does not permit update'
-            }
-          >
-            <Edit3 className="h-4 w-4 mr-1.5" />
-            Update
-          </Button>
+          {currentUser?.role === 'Registrar' && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canUpdateOrRevoke}
+                onClick={() => setIsUpdateOpen(true)}
+                title={
+                  canUpdateOrRevoke
+                    ? 'Update Degree Academic Details'
+                    : 'Degree status does not permit update'
+                }
+              >
+                <Edit3 className="h-4 w-4 mr-1.5" />
+                Update
+              </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!canUpdateOrRevoke}
-            onClick={() => setIsRevokeOpen(true)}
-            title={
-              canUpdateOrRevoke
-                ? 'Revoke Degree'
-                : 'Degree status does not permit revocation'
-            }
-            className="text-destructive border-destructive/30 hover:bg-destructive/10"
-          >
-            <ShieldOff className="h-4 w-4 mr-1.5" />
-            Revoke
-          </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!canUpdateOrRevoke}
+                onClick={() => setIsRevokeOpen(true)}
+                title={
+                  canUpdateOrRevoke
+                    ? 'Revoke Degree'
+                    : 'Degree status does not permit revocation'
+                }
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                <ShieldOff className="h-4 w-4 mr-1.5" />
+                Revoke
+              </Button>
+            </>
+          )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            title="Available in Phase 4"
-            className="opacity-60 cursor-not-allowed text-amber-600 border-amber-200"
-          >
-            <AlertTriangle className="h-4 w-4 mr-1.5" />
-            Report Issue (Phase 4)
-          </Button>
+          {canReport && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsReportOpen(true)}
+              title="Report issue or fraudulent data on this degree"
+              className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+            >
+              <AlertTriangle className="h-4 w-4 mr-1.5" />
+              Report Issue / Fraud
+            </Button>
+          )}
         </div>
       </div>
 
@@ -245,6 +261,16 @@ export function DegreeDetailPage() {
         degree={degree}
         onSuccess={handleRevokeSuccess}
         onConflict={handleConflict}
+      />
+
+      <ReportFormModal
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+        degreeId={degree.id}
+        degreeCode={degree.degreeCode}
+        onSuccess={() => {
+          refetch();
+        }}
       />
     </div>
   );
